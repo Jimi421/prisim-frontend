@@ -1,17 +1,19 @@
-// File: pages/api/galleries.ts
+export const runtime = 'edge'
 
-import type { NextApiRequest, NextApiResponse } from 'next'
-import { getDb } from '../../lib/db'
+import type { NextRequest } from 'next/server'
+import { getDb }            from '../../lib/db'
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+export async function GET(
+  request: NextRequest,
+  { env }: { env: any }
 ) {
-  const db = getDb(process.env as any)
+  const db      = getDb(env)
   const { results } = await db
     .prepare(`SELECT * FROM galleries`)
     .all()
 
-  res.status(200).json(results)
+  return new Response(JSON.stringify(results), {
+    headers: { 'Content-Type': 'application/json' },
+  })
 }
 
