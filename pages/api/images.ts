@@ -1,21 +1,18 @@
 // File: pages/api/images.ts
 
-import type { NextRequest } from 'next/server'
+import type { NextApiRequest, NextApiResponse } from 'next'
 import { getDb } from '../../lib/db'
 
-export async function GET(
-  request: NextRequest,
-  { env }: { env: any }    // ← inline type to satisfy TS for now
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
 ) {
-  const url     = new URL(request.url)
-  const gallery = url.searchParams.get('gallery')
-  const db      = getDb(env)
+  const { gallery } = req.query
+  const db = getDb(process.env as any)
 
-  if (!gallery) {
-    return new Response(JSON.stringify({ error: 'Missing gallery parameter' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    })
+  if (!gallery || typeof gallery !== 'string') {
+    res.status(400).json({ error: 'Missing gallery parameter' })
+    return
   }
 
   const { results } = await db
@@ -23,8 +20,6 @@ export async function GET(
     .bind(gallery)
     .all()
 
-  return new Response(JSON.stringify(results), {
-    headers: { 'Content-Type': 'application/json' },
-  })
+  res.status(200).json(results)
 }
 
