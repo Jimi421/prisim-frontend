@@ -1,0 +1,18 @@
+/* Import Tailwind’s layers */
+@import "./tailwind.css";
+
+/* — Your custom global overrides go below — */
+
+html,
+body {
+  /* Example reset */
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+}
+
+/* Example: apply a background and text color */
+body {
+  @apply bg-gray-50 text-gray-900;
+}
+

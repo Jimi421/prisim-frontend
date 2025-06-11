@@ -1,24 +1,30 @@
-// prisim-frontend/pages/api/images.ts
-import type { NextRequest } from 'next/server';
-import { getDb } from '../../lib/db';
+// File: pages/api/images.ts
 
-export async function GET(request: NextRequest, { env }) {
-  const url = new URL(request.url);
-  const gallery = url.searchParams.get('gallery');
-  const db = getDb(env);
+import type { NextRequest } from 'next/server'
+import { getDb } from '../../lib/db'
 
-  let query = `SELECT i.* FROM images i
-               JOIN gallery_images gi ON gi.image_id = i.id`;
-  const params: any[] = [];
+export async function GET(
+  request: NextRequest,
+  { env }: { env: any }    // ← inline type to satisfy TS for now
+) {
+  const url     = new URL(request.url)
+  const gallery = url.searchParams.get('gallery')
+  const db      = getDb(env)
 
-  if (gallery) {
-    query += ` WHERE gi.gallery_id = ?`;
-    params.push(gallery);
+  if (!gallery) {
+    return new Response(JSON.stringify({ error: 'Missing gallery parameter' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
-  const { results } = await db.prepare(query).bind(...params).all();
+  const { results } = await db
+    .prepare(`SELECT * FROM images WHERE gallery = ?`)
+    .bind(gallery)
+    .all()
+
   return new Response(JSON.stringify(results), {
     headers: { 'Content-Type': 'application/json' },
-  });
+  })
 }
 
