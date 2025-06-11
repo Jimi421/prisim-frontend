@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# production
+dist/
+
+# local environment variables
+.env
+.env.*
+
+# IDE / editor
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+

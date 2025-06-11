@@ -1,0 +1,10 @@
+# prisim-frontend/wrangler.toml
+name = "prisim-frontend"
+type = "javascript"
+account_id = "<YOUR_ACCOUNT_ID>"
+workers_dev = true
+
+[[d1_databases]]
+binding = "JIMI_DB"
+database_name = "prisim_db"
+
