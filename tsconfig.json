@@ -1,5 +1,5 @@
 {
-  "extends": "next/core-web-vitals",
+  "extends": "next/tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
