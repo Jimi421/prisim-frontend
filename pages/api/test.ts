@@ -1,4 +1,4 @@
-// pages/api/images.ts
+// pages/api/test.ts
 
 import type { D1Database } from '@cloudflare/workers-types'
 
