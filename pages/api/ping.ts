@@ -2,6 +2,7 @@
 
 import type { D1Database } from '@cloudflare/workers-types'
 
+// 1. Tell Next/CF Pages to build this as an Edge Function:
 export const config = {
   runtime: 'edge',
 }
@@ -11,8 +12,9 @@ export default async function handler(
   { env }: { env: { JIMI_DB: D1Database } }
 ) {
   try {
-    // ping the D1 binding
+    // 2. Exercise your D1 binding
     const { results } = await env.JIMI_DB.prepare('SELECT 1 AS ok').all()
+
     return new Response(
       JSON.stringify({ ok: true, results }),
       { headers: { 'Content-Type': 'application/json' } }
@@ -22,7 +24,6 @@ export default async function handler(
       JSON.stringify({
         ok: false,
         error: err.message || String(err),
-        // truncate stack for brevity
         stack: err.stack?.split('\n').slice(0, 3),
       }),
       {
