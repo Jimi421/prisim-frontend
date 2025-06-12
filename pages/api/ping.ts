@@ -1,24 +1,19 @@
-// pages/api/ping.ts
+import { getRequestContext } from '@cloudflare/next-on-pages';
 
-import type { D1Database } from '@cloudflare/workers-types'
+export const runtime = 'edge';
 
-// 1. Tell Next/CF Pages to build this as an Edge Function:
-export const config = {
-  runtime: 'edge',
-}
-
-export default async function handler(
-  request: Request,
-  { env }: { env: { JIMI_DB: D1Database } }
-) {
+export async function GET(request: Request): Promise<Response> {
   try {
-    // 2. Exercise your D1 binding
-    const { results } = await env.JIMI_DB.prepare('SELECT 1 AS ok').all()
+    const { env } = getRequestContext();
+    const result = await env.JIMI_DB.prepare('SELECT 1 as result').first();
 
     return new Response(
-      JSON.stringify({ ok: true, results }),
-      { headers: { 'Content-Type': 'application/json' } }
-    )
+      JSON.stringify({ ok: true, result }),
+      {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   } catch (err: any) {
     return new Response(
       JSON.stringify({
@@ -30,7 +25,7 @@ export default async function handler(
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       }
-    )
+    );
   }
 }
 
