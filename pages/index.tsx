@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 type Sketch = {
   id: number;
   title: string;
-  imageUrl: string;
   createdAt: string;
+  imageUrl: string;
+  isBlackAndWhite: boolean;
+  style: string;
 };
 
 export default function HomePage() {
@@ -14,33 +16,32 @@ export default function HomePage() {
   useEffect(() => {
     fetch("/api/sketches")
       .then((res) => res.json())
-      .then((data) => {
+      .then((data: { sketches: Sketch[] }) => {
         setSketches(data.sketches);
         setLoading(false);
       });
   }, []);
 
   return (
-    <div className="relative min-h-screen bg-white p-4 max-w-5xl mx-auto">
-      <h1 className="text-4xl font-bold mb-6">Prisim Sketch Gallery</h1>
-
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">My Sketches</h1>
       {loading ? (
-        <p className="text-gray-600">Loading...</p>
+        <p>Loading sketches...</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
           {sketches.map((sketch) => (
-            <div
-              key={sketch.id}
-              className="rounded-lg overflow-hidden shadow-md border"
-            >
+            <div key={sketch.id} className="rounded shadow p-2">
               <img
                 src={sketch.imageUrl}
                 alt={sketch.title}
-                className="w-full h-48 object-cover"
+                className="w-full h-auto rounded"
               />
-              <div className="p-2 text-sm">
-                <p className="font-medium">{sketch.title}</p>
-                <p className="text-xs text-gray-500">
+              <div className="mt-2 text-sm">
+                <strong>{sketch.title}</strong>
+                <p className="text-gray-500">
+                  {sketch.isBlackAndWhite ? "Black & White" : sketch.style}
+                </p>
+                <p className="text-xs text-gray-400">
                   {new Date(sketch.createdAt).toLocaleDateString()}
                 </p>
               </div>
@@ -48,14 +49,6 @@ export default function HomePage() {
           ))}
         </div>
       )}
-
-      {/* Upload Button */}
-      <a
-        href="/sketch"
-        className="fixed bottom-6 right-6 bg-black text-white px-4 py-2 rounded-full shadow-lg hover:bg-gray-800 transition"
-      >
-        + Upload
-      </a>
     </div>
   );
 }
