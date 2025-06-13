@@ -1,133 +1,46 @@
-// components/SketchUploader.tsx
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 
 export default function SketchUploader({ onUploaded }: { onUploaded: () => void }) {
-  const [file, setFile] = useState<File|null>(null);
-  const [title, setTitle] = useState('');
-  const [style, setStyle] = useState('pen');
-  const [blackAndWhite, setBlackAndWhite] = useState(false);
-  const [notes, setNotes] = useState('');
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<string|null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [status, setStatus] = useState("");
 
-  function handleDrop(e: React.DragEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
-  }
+    const form = formRef.current;
+    if (!form) return;
 
-  function upload() {
-    if (!file) return setStatus('Select a file first');
-    const form = new FormData();
-    form.append('file', file);
-    form.append('title', title);
-    form.append('style', style);
-    form.append('blackAndWhite', blackAndWhite ? 'on' : '');
-    form.append('notes', notes);
+    const formData = new FormData(form);
+    setStatus("Uploading…");
 
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', '/upload');
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) setProgress(e.loaded / e.total);
-    };
-    xhr.onload = () => {
-      const data = JSON.parse(xhr.responseText);
-      if (data.ok) {
-        setStatus(`✅ Uploaded as ${data.key}`);
-        setFile(null);
-        setTitle('');
-        setNotes('');
-        setProgress(0);
-        onUploaded();
-      } else {
-        setStatus('❌ Upload failed');
-      }
-    };
-    xhr.onerror = () => setStatus('❌ Upload error');
-    xhr.send(form);
+    const res = await fetch("/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    const json = await res.json();
+    if (json.ok) {
+      setStatus("Uploaded!");
+      onUploaded();
+      form.reset();
+    } else {
+      setStatus("Upload failed: " + json.error);
+    }
   }
 
   return (
-    <div
-      onDragOver={e => e.preventDefault()}
-      onDrop={handleDrop}
-      className="p-4 border-2 border-dashed rounded-lg text-center"
-    >
-      {file ? (
-        <div className="mb-2">
-          <p className="font-semibold">{file.name}</p>
-          <img
-            src={URL.createObjectURL(file)}
-            alt="preview"
-            className="mx-auto max-h-40"
-          />
-        </div>
-      ) : (
-        <p>Drag & drop a sketch here, or <button
-          type="button"
-          className="text-blue-600 underline"
-          onClick={() => inputRef.current?.click()}
-        >browse</button></p>
-      )}
-      <input
-        type="file"
-        accept="image/*"
-        hidden
-        ref={inputRef}
-        onChange={e => e.target.files && setFile(e.target.files[0])}
-      />
-
-      <div className="mt-4 flex flex-col space-y-2">
-        <input
-          type="text"
-          placeholder="Title"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          className="border rounded p-1"
-        />
-        <select
-          value={style}
-          onChange={e => setStyle(e.target.value)}
-          className="border rounded p-1"
-        >
-          <option value="pen">Pen</option>
-          <option value="watercolour">Watercolour</option>
-          <option value="digital">Digital</option>
-        </select>
-        <label className="inline-flex items-center">
-          <input
-            type="checkbox"
-            checked={blackAndWhite}
-            onChange={e => setBlackAndWhite(e.target.checked)}
-            className="mr-2"
-          />
-          Black & White
-        </label>
-        <textarea
-          placeholder="Notes"
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          className="border rounded p-1"
-        />
-        <button
-          onClick={upload}
-          className="bg-blue-600 text-white rounded py-2 disabled:opacity-50"
-          disabled={!file}
-        >
-          Upload
-        </button>
-      </div>
-
-      {progress > 0 && (
-        <div className="mt-2 w-full bg-gray-200 rounded">
-          <div
-            className="h-2 bg-blue-600 rounded"
-            style={{ width: `${progress * 100}%` }}
-          />
-        </div>
-      )}
-      {status && <p className="mt-2">{status}</p>}
-    </div>
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-2 border p-4 rounded">
+      <h2 className="font-semibold text-xl">Upload a Sketch</h2>
+      <input type="file" name="file" required className="block" />
+      <input type="text" name="title" placeholder="Title" className="block w-full border p-1" />
+      <input type="text" name="style" placeholder="Style" className="block w-full border p-1" />
+      <textarea name="notes" placeholder="Notes" className="block w-full border p-1" />
+      <label className="block">
+        <input type="checkbox" name="blackAndWhite" value="true" />
+        Black and White
+      </label>
+      <button type="submit" className="bg-black text-white px-4 py-1 rounded">Upload</button>
+      <p className="text-sm text-gray-600">{status}</p>
+    </form>
   );
 }
 
