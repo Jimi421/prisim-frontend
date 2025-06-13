@@ -1,0 +1,14 @@
+# prisim-frontend/wrangler.toml
+name = "prisim-frontend"
+type = "javascript"
+account_id = "<698917d9ae04da2587d19eaae5bcef5c"
+workers_dev = true
+compatibility_date = "2025-06-13"
+main = "./.next/entry.workerd.mjs"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "JIMI_DB"
+database_name = "prisim-frontend"
+database_id = "<1354e0eb-58e2-4041-94ba-9bbd5a06fb6a>"
+
