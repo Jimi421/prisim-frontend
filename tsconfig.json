@@ -10,9 +10,13 @@
     "noEmit": true,
     "jsx": "preserve",
     "incremental": true,
-    "types": ["@cloudflare/next-on-pages"]
+    "types": [
+      "@cloudflare/workers-types",
+      "@cloudflare/next-on-pages"
+    ]
   },
   "include": [
+    "types.d.ts",
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx"
