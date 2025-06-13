@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import SketchUploader from '../components/SketchUploader'; // ✅ FIXED PATH
+import SketchUploader from '../components/SketchUploader'; // ✅ Fixed path
 
 interface Sketch {
   id: number;
@@ -21,7 +21,7 @@ export default function SketchPage() {
     setLoading(true);
     try {
       const res = await fetch('/sketches');
-      const data = await res.json();
+      const data: { ok: boolean; sketches: Sketch[] } = await res.json(); // ✅ Fixed typing
       if (data.ok) {
         setSketches(data.sketches);
       }
@@ -64,7 +64,9 @@ export default function SketchPage() {
                   <p className="text-xs text-gray-500">🖤 Black & White</p>
                 )}
                 {sketch.notes && <p className="text-xs mt-1">{sketch.notes}</p>}
-                <p className="text-xs text-gray-400 mt-1">{new Date(sketch.created_at).toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {new Date(sketch.created_at).toLocaleString()}
+                </p>
               </div>
             </div>
           ))}
