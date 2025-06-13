@@ -1,9 +1,15 @@
-/// <reference types="@cloudflare/workers-types" />
+import { D1Database, R2Bucket } from '@cloudflare/workers-types';
 
-declare namespace CloudflareEnv {
-  /** your D1 database binding */
-  export const JIMI_DB: D1Database;
-  /** your R2 bucket binding */
-  export const PRISIM_BUCKET: R2Bucket;
+declare global {
+  interface CloudflareEnv {
+    /** your D1 binding name */
+    JIMI_DB: D1Database;
+    /** your R2 binding name */
+    PRISIM_BUCKET: R2Bucket;
+  }
 }
+
+// make sure this file is treated as a module
+export {};
+
 
