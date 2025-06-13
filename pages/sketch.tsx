@@ -1,56 +1,76 @@
-// pages/sketch.tsx
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import SketchUploader from '@/components/SketchUploader';
+import SketchUploader from '../components/SketchUploader'; // ✅ FIXED PATH
 
-interface Sketch { /* same as before */ }
+interface Sketch {
+  id: number;
+  slug: string;
+  title: string;
+  style: string;
+  black_and_white: number;
+  notes: string;
+  url: string;
+  created_at: string;
+}
 
 export default function SketchPage() {
   const [sketches, setSketches] = useState<Sketch[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = () => {
+  async function loadSketches() {
     setLoading(true);
-    fetch('/api/sketches')
-      .then(r => r.json())
-      .then(d => {
-        setSketches(d.sketches);
-        setLoading(false);
-      });
-  };
+    try {
+      const res = await fetch('/sketches');
+      const data = await res.json();
+      if (data.ok) {
+        setSketches(data.sketches);
+      }
+    } catch (err) {
+      console.error("Error loading sketches:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
-  useEffect(load, []);
+  useEffect(() => {
+    loadSketches();
+  }, []);
 
   return (
-    <main className="p-4 space-y-8">
-      <SketchUploader onUploaded={load} />
+    <div className="p-6 max-w-4xl mx-auto">
+      <SketchUploader onUploaded={loadSketches} />
 
-      <h1 className="text-3xl font-bold">My Sketches</h1>
-      {loading
-        ? <p>Loading…</p>
-        : (
-          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-            {sketches.map(s => (
-              <div key={s.id} className="border rounded shadow p-2">
-                <Image
-                  src={s.url}
-                  alt={s.title}
-                  width={400} height={300}
-                  className="rounded"
-                />
-                <h2 className="mt-2 font-semibold">{s.title}</h2>
-                <p className="text-sm text-gray-600">
-                  {s.style} | B&W: {s.blackAndWhite ? 'Yes' : 'No'}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {new Date(s.createdAt).toLocaleString()}
-                </p>
-                {s.notes && <p className="mt-1 text-sm">{s.notes}</p>}
+      <h2 className="text-2xl font-bold mt-8 mb-4">Gallery</h2>
+
+      {loading ? (
+        <p>Loading sketches…</p>
+      ) : sketches.length === 0 ? (
+        <p>No sketches yet. Upload one!</p>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {sketches.map((sketch) => (
+            <div key={sketch.id} className="border rounded shadow p-2 bg-white">
+              <Image
+                src={sketch.url}
+                alt={sketch.title}
+                width={400}
+                height={300}
+                className="object-cover w-full h-auto rounded"
+              />
+              <div className="mt-2">
+                <h3 className="font-semibold text-lg">{sketch.title}</h3>
+                <p className="text-sm text-gray-600">{sketch.style}</p>
+                {sketch.black_and_white === 1 && (
+                  <p className="text-xs text-gray-500">🖤 Black & White</p>
+                )}
+                {sketch.notes && <p className="text-xs mt-1">{sketch.notes}</p>}
+                <p className="text-xs text-gray-400 mt-1">{new Date(sketch.created_at).toLocaleString()}</p>
               </div>
-            ))}
-          </div>
-        )}
-    </main>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
