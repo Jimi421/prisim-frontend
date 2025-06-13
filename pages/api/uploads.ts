@@ -1,58 +1,36 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import formidable from 'formidable';
-import { put } from '@vercel/blob';
-import { PrismaClient } from '@prisma/client'; // or your preferred DB client
-
-// Required for parsing multipart/form-data
+// pages/api/uploads.ts
 export const config = {
-  api: {
-    bodyParser: false,
-  },
+  runtime: 'edge',
 };
 
-// Replace with your own R2 + D1 logic
-const uploadHandler = async (req: NextApiRequest, res: NextApiResponse) => {
+export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
-    return res.status(405).json({ ok: false, error: 'Method Not Allowed' });
+    return new Response('Method Not Allowed', { status: 405 });
   }
 
-  const form = new formidable.IncomingForm();
+  try {
+    const formData = await req.formData();
+    const file = formData.get('file') as File;
 
-  form.parse(req, async (err, fields, files) => {
-    if (err || !files.file || Array.isArray(files.file)) {
-      return res.status(400).json({ ok: false, error: 'Invalid file upload' });
+    if (!file) {
+      return new Response(JSON.stringify({ ok: false, error: 'No file uploaded' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
-    try {
-      const file = files.file;
-      const { filepath, originalFilename } = file;
-      const data = await fs.promises.readFile(filepath);
-      const fileKey = `uploads/${Date.now()}-${originalFilename}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const filename = `${Date.now()}_${file.name}`;
+    await PRISIM_BUCKET.put(filename, arrayBuffer);
 
-      // ✅ Upload to R2 using the Vercel blob API or Cloudflare's SDK
-      const blob = await put(fileKey, data, {
-        access: 'public',
-      });
-
-      // ✅ Store metadata in D1 (sketch slug, style, etc.)
-      const prisma = new PrismaClient(); // or your D1 equivalent
-      await prisma.gallery_sketches.create({
-        data: {
-          slug: fields.slug as string,
-          title: fields.title as string,
-          notes: fields.notes as string,
-          created_at: new Date().toISOString(),
-          style: fields.style as string,
-        },
-      });
-
-      return res.status(200).json({ ok: true, fileUrl: blob.url });
-    } catch (e) {
-      console.error('Upload error', e);
-      return res.status(500).json({ ok: false, error: 'Upload failed' });
-    }
-  });
-};
-
-export default uploadHandler;
+    return new Response(JSON.stringify({ ok: true, key: filename }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ ok: false, error: String(err) }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
 
