@@ -12,33 +12,62 @@ export default function SketchUploader({ onUploaded }: { onUploaded: () => void 
     const formData = new FormData(form);
     setStatus("Uploading…");
 
-    const res = await fetch("/upload", {
-      method: "POST",
-      body: formData
-    });
+    try {
+      const res = await fetch("/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-    const json = await res.json();
-    if (json.ok) {
-      setStatus("Uploaded!");
-      onUploaded();
-      form.reset();
-    } else {
-      setStatus("Upload failed: " + json.error);
+      const json: { ok: boolean; error?: string } = await res.json();
+
+      if (json.ok) {
+        setStatus("✅ Uploaded!");
+        onUploaded();
+        form.reset();
+      } else {
+        setStatus("❌ Upload failed: " + (json.error || "Unknown error"));
+      }
+    } catch (err: any) {
+      setStatus("❌ Error: " + err.message);
     }
   }
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-2 border p-4 rounded">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-3 border p-4 rounded bg-white shadow">
       <h2 className="font-semibold text-xl">Upload a Sketch</h2>
-      <input type="file" name="file" required className="block" />
-      <input type="text" name="title" placeholder="Title" className="block w-full border p-1" />
-      <input type="text" name="style" placeholder="Style" className="block w-full border p-1" />
-      <textarea name="notes" placeholder="Notes" className="block w-full border p-1" />
+
+      <input type="file" name="file" required className="block w-full" />
+
+      <input
+        type="text"
+        name="title"
+        placeholder="Title"
+        required
+        className="block w-full border p-2 rounded"
+      />
+
+      <input
+        type="text"
+        name="style"
+        placeholder="Style (e.g., ink, watercolor)"
+        className="block w-full border p-2 rounded"
+      />
+
+      <textarea
+        name="notes"
+        placeholder="Notes"
+        className="block w-full border p-2 rounded"
+      />
+
       <label className="block">
-        <input type="checkbox" name="blackAndWhite" value="true" />
+        <input type="checkbox" name="blackAndWhite" value="true" className="mr-1" />
         Black and White
       </label>
-      <button type="submit" className="bg-black text-white px-4 py-1 rounded">Upload</button>
+
+      <button type="submit" className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800">
+        Upload
+      </button>
+
       <p className="text-sm text-gray-600">{status}</p>
     </form>
   );
