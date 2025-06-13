@@ -1,19 +1,18 @@
-// pages/api/uploads.ts
+import { getRequestContext } from '@cloudflare/next-on-pages';
+
 export const config = {
   runtime: 'edge',
 };
 
-export default async function handler(req: Request): Promise<Response> {
-  if (req.method !== 'POST') {
-    return new Response('Method Not Allowed', { status: 405 });
-  }
+export async function POST(request: Request) {
+  const { env } = getRequestContext();
 
   try {
-    const formData = await req.formData();
+    const formData = await request.formData();
     const file = formData.get('file') as File;
 
     if (!file) {
-      return new Response(JSON.stringify({ ok: false, error: 'No file uploaded' }), {
+      return new Response(JSON.stringify({ error: 'No file uploaded' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -21,16 +20,24 @@ export default async function handler(req: Request): Promise<Response> {
 
     const arrayBuffer = await file.arrayBuffer();
     const filename = `${Date.now()}_${file.name}`;
-    await PRISIM_BUCKET.put(filename, arrayBuffer);
 
-    return new Response(JSON.stringify({ ok: true, key: filename }), {
-      headers: { 'Content-Type': 'application/json' },
-    });
+    await env.PRISIM_BUCKET.put(filename, arrayBuffer);
+
+    return new Response(
+      JSON.stringify({ ok: true, key: filename }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+        status: 200,
+      }
+    );
   } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: String(err) }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({ error: 'Upload failed', details: (err as Error).message }),
+      {
+        headers: { 'Content-Type': 'application/json' },
+        status: 500,
+      }
+    );
   }
 }
 
