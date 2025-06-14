@@ -3,32 +3,51 @@ import { getRequestContext } from "@cloudflare/next-on-pages";
 
 export const config = { runtime: "edge" };
 
-// Default-exported handler is required for Edge API routes
-export default async function handler(
-  request: Request,
-  { params }: { params: { key: string } }
-) {
+export default async function handler(request: Request) {
   const { env } = getRequestContext();
-  const key = params.key;
+
+  // 1️⃣ Extract the key from the URL, not from params
+  const url = new URL(request.url);
+  // URL.pathname === "/api/abcd1234-...", so split off the last segment
+  const key = url.pathname.split("/").pop();
+
+  if (!key) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "No key in URL" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
 
   try {
+    // 2️⃣ Fetch the object from R2
     const object = await env.PRISIM_BUCKET.get(key);
     if (!object) {
       return new Response(
         JSON.stringify({ ok: false, error: "Not found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
+        {
+          status: 404,
+          headers: { "Content-Type": "application/json" },
+        }
       );
     }
 
-    // Return the raw image bytes with correct content type
+    // 3️⃣ Stream back the raw bytes with the correct content-type
     return new Response(object.body, {
-      headers: { "Content-Type": object.httpMetadata.contentType },
+      headers: {
+        "Content-Type": object.httpMetadata.contentType,
+      },
     });
   } catch (err: any) {
     console.error("Fetch image error:", err);
     return new Response(
       JSON.stringify({ ok: false, error: err.message || "Internal Error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      }
     );
   }
 }
