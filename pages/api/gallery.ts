@@ -1,18 +1,29 @@
-const fetchGallery = async () => {
+import { getRequestContext } from "@cloudflare/next-on-pages";
+
+export const config = { runtime: "edge" };
+
+export async function GET() {
+  const { env } = getRequestContext();
+
   try {
-    const res = await fetch("/api/gallery");
-    const data = await res.json();
+    const result = await env.JIMI_DB
+      .prepare(
+        `SELECT slug AS id, title, '/api/' || slug AS url
+         FROM gallery_sketches
+         ORDER BY rowid DESC
+         LIMIT 20`
+      )
+      .all();
 
-    if (!Array.isArray(data)) {
-      console.error("Invalid gallery data:", data);
-      setImages([]);
-      return;
-    }
-
-    setImages(data);
-  } catch (err) {
-    console.error("Failed to load gallery:", err);
-    setImages([]);
+    return new Response(JSON.stringify(result.results), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err: any) {
+    console.error("D1 gallery fetch failed:", err);
+    return new Response(
+      JSON.stringify({ error: "Failed to fetch gallery" }),
+      { status: 500 }
+    );
   }
-};
+}
 

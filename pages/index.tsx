@@ -13,16 +13,27 @@ type GalleryItem = {
 export default function HomePage() {
   const [images, setImages] = useState<GalleryItem[]>([]);
 
+  // Fetch gallery items from your Edge API, with safety checks
   const fetchGallery = async () => {
     try {
       const res = await fetch("/api/gallery");
-      const data: GalleryItem[] = await res.json();
+      const data = await res.json();
+      console.log("Fetched gallery data:", data);
+
+      if (!Array.isArray(data)) {
+        console.error("Invalid gallery data (not an array):", data);
+        setImages([]);
+        return;
+      }
+
       setImages(data);
     } catch (err) {
       console.error("Failed to load gallery:", err);
+      setImages([]);
     }
   };
 
+  // Load on mount and whenever an upload completes
   useEffect(() => {
     fetchGallery();
   }, []);
@@ -32,10 +43,13 @@ export default function HomePage() {
       <Header />
 
       <main className="max-w-5xl mx-auto p-6 space-y-10">
+        {/* Upload form */}
         <SketchUploader onUploaded={fetchGallery} />
 
+        {/* Gallery grid */}
         <section>
           <h2 className="text-2xl font-semibold mb-4">Latest Uploads</h2>
+
           {images.length === 0 ? (
             <p className="text-gray-500">No sketches uploaded yet.</p>
           ) : (
