@@ -1,24 +1,18 @@
-export const config = {
-  runtime: "edge", // Required for Cloudflare Pages
-};
-
-export default async function handler(req: Request, ctx: any) {
+const fetchGallery = async () => {
   try {
-    const db = ctx.env.JIMI_DB;
+    const res = await fetch("/api/gallery");
+    const data = await res.json();
 
-    const result = await db
-      .prepare("SELECT id, slug, title, style, url, created_at FROM gallery_sketches ORDER BY created_at DESC")
-      .all();
+    if (!Array.isArray(data)) {
+      console.error("Invalid gallery data:", data);
+      setImages([]);
+      return;
+    }
 
-    return new Response(JSON.stringify({ success: true, data: result.results }), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ success: false, error: err.message }), {
-      headers: { "Content-Type": "application/json" },
-      status: 500,
-    });
+    setImages(data);
+  } catch (err) {
+    console.error("Failed to load gallery:", err);
+    setImages([]);
   }
-}
+};
 
