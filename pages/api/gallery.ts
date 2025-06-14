@@ -4,7 +4,7 @@ export const config = {
 
 export default async function handler(req: Request, ctx: any) {
   try {
-    const db = ctx.env.DB;
+    const db = ctx.env.JIMI_DB;
 
     const result = await db
       .prepare("SELECT id, slug, title, style, url, created_at FROM gallery_sketches ORDER BY created_at DESC")
