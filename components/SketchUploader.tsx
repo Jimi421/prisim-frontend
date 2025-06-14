@@ -13,7 +13,7 @@ export default function SketchUploader({ onUploaded }: { onUploaded: () => void 
     setStatus("Uploading…");
 
     try {
-      const res = await fetch("/api/uploads", {
+      const res = await fetch('/api/uploads', {
         method: "POST",
         body: formData,
       });
