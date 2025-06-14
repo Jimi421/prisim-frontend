@@ -3,25 +3,18 @@ import { NextResponse } from "next/server";
 
 export const config = { runtime: "edge" };
 
-export async function POST(request: Request) {
+export default async function handler(request: Request) {
   const { env } = getRequestContext();
-
   try {
     const ct = request.headers.get("content-type") || "";
     if (!ct.includes("multipart/form-data")) {
-      return NextResponse.json(
-        { ok: false, error: "Invalid content type" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Invalid content type" }, { status: 400 });
     }
 
     const form = await request.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {
-      return NextResponse.json(
-        { ok: false, error: "Missing file" },
-        { status: 400 }
-      );
+      return NextResponse.json({ ok: false, error: "Missing file" }, { status: 400 });
     }
 
     const title = form.get("title")?.toString() || "";
@@ -45,7 +38,7 @@ export async function POST(request: Request) {
       .bind(key, title, style, blackAndWhite ? 1 : 0, notes, url)
       .run();
 
-    return NextResponse.json({ ok: true, key }, { status: 200 });
+    return NextResponse.json({ ok: true, key });
   } catch (err: any) {
     console.error("Upload error:", err);
     return NextResponse.json(
