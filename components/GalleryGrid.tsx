@@ -1,16 +1,15 @@
-// prisim-frontend/components/GalleryGrid.tsx
 import React from 'react';
 import Card from './Card';
 
 interface Image {
-  id: number;
+  id: string; // ✅ patched: string instead of number
   title: string;
   url: string;
 }
 
 interface GalleryGridProps {
   images: Image[];
-  onCardClick?: (id: number) => void;
+  onCardClick?: (id: string) => void;
 }
 
 export default function GalleryGrid({ images, onCardClick }: GalleryGridProps) {
@@ -27,5 +26,4 @@ export default function GalleryGrid({ images, onCardClick }: GalleryGridProps) {
     </div>
   );
 }
-
 
