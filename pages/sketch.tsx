@@ -20,7 +20,7 @@ export default function SketchPage() {
   async function loadSketches() {
     setLoading(true);
     try {
-      const res = await fetch('/sketches');
+      const res = await fetch('/api/sketches');
       const data: { ok: boolean; sketches: Sketch[] } = await res.json(); // ✅ Fixed typing
       if (data.ok) {
         setSketches(data.sketches);
