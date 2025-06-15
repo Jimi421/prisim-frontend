@@ -1,3 +1,4 @@
+// pages/gallery/[slug].tsx
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
@@ -62,7 +63,10 @@ export default function GalleryPage() {
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-pulse">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="bg-gray-200 h-48 rounded-xl" />
+              <div
+                key={i}
+                className="bg-gray-200 h-48 rounded-xl"
+              />
             ))}
           </div>
         ) : error ? (
