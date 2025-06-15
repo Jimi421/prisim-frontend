@@ -1,8 +1,5 @@
 import { useEffect, useState } from "react";
-import SketchUploader from "../components/SketchUploader";
 import GalleryGrid from "../components/GalleryGrid";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
 
 type GalleryItem = {
   id: string;
@@ -17,16 +14,13 @@ export default function HomePage() {
     try {
       const res = await fetch("/api/gallery");
       const data = await res.json();
-      console.log("Fetched gallery:", data);
-
       if (!Array.isArray(data)) {
         console.error("Invalid gallery data:", data);
         setImages([]);
         return;
       }
       setImages(data);
-    } catch (err) {
-      console.error("Failed to load gallery:", err);
+    } catch {
       setImages([]);
     }
   };
@@ -36,22 +30,17 @@ export default function HomePage() {
   }, []);
 
   return (
-    <>
-      <Header />
-      <main className="max-w-5xl mx-auto p-6 space-y-10">
-        <SketchUploader onUploaded={fetchGallery} />
+    <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-8">
+        Latest Uploads
+      </h1>
 
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Latest Uploads</h2>
-          {images.length === 0 ? (
-            <p className="text-gray-500">No sketches uploaded yet.</p>
-          ) : (
-            <GalleryGrid images={images} />
-          )}
-        </section>
-      </main>
-      <Footer />
-    </>
+      {images.length === 0 ? (
+        <p className="text-center text-gray-500 text-lg">No sketches uploaded yet.</p>
+      ) : (
+        <GalleryGrid images={images} />
+      )}
+    </section>
   );
 }
 
