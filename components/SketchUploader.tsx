@@ -12,7 +12,6 @@ export default function SketchUploader({ onUploaded }: SketchUploaderProps) {
   const [rotation, setRotation] = useState<number>(0);
   const [status, setStatus] = useState<string>('');
 
-  // Create object URL for preview
   useEffect(() => {
     if (!file) return;
     const url = URL.createObjectURL(file);
@@ -30,7 +29,6 @@ export default function SketchUploader({ onUploaded }: SketchUploaderProps) {
   const rotateLeft = () => setRotation((r) => r - 90);
   const rotateRight = () => setRotation((r) => r + 90);
 
-  // Rotate in-memory image and return a new File if rotated
   const prepareUploadFile = async (): Promise<File> => {
     if (!preview || rotation % 360 === 0) return file!;
     return new Promise<File>((resolve, reject) => {
@@ -75,12 +73,15 @@ export default function SketchUploader({ onUploaded }: SketchUploaderProps) {
         method: 'POST',
         body: formData,
       });
+
       const json: { ok: boolean; error?: string } = await res.json();
+
       if (json.ok) {
         setStatus('✅ Uploaded!');
         onUploaded();
         form.reset();
         setFile(null);
+        setPreview(null);
       } else {
         setStatus('❌ Upload failed: ' + (json.error || 'Unknown error'));
       }
@@ -90,7 +91,11 @@ export default function SketchUploader({ onUploaded }: SketchUploaderProps) {
   };
 
   return (
-    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4 p-4 rounded bg-white shadow sm:max-w-md mx-auto">
+    <form
+      ref={formRef}
+      onSubmit={handleSubmit}
+      className="space-y-4 p-4 rounded bg-white shadow sm:max-w-md mx-auto"
+    >
       <h2 className="font-semibold text-xl text-center">Upload a Sketch</h2>
 
       <div className="flex flex-col items-center">
@@ -127,13 +132,7 @@ export default function SketchUploader({ onUploaded }: SketchUploaderProps) {
 
       {preview && (
         <>
-          <input
-            type="text"
-            name="title"
-            placeholder="Title"
-            required
-            className="block w-full border p-2 rounded"
-          />
+          <input type="text" name="title" placeholder="Title" required className="block w-full border p-2 rounded" />
           <input
             type="text"
             name="style"
@@ -145,6 +144,13 @@ export default function SketchUploader({ onUploaded }: SketchUploaderProps) {
             placeholder="Notes"
             className="block w-full border p-2 rounded"
             rows={3}
+          />
+          <input
+            type="text"
+            name="gallery"
+            placeholder="Gallery (e.g., default, trees, animals)"
+            required
+            className="block w-full border p-2 rounded"
           />
           <label className="flex items-center space-x-2">
             <input type="checkbox" name="blackAndWhite" value="1" className="rounded" />
