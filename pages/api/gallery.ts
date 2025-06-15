@@ -1,28 +1,32 @@
-import { getRequestContext } from "@cloudflare/next-on-pages";
-import { NextResponse } from "next/server";
+import type { NextRequest } from 'next/server';
 
-export const config = { runtime: "edge" };
+export const config = {
+  runtime: 'edge',
+};
 
-export default async function handler(request: Request) {
-  if (request.method !== "GET") {
-    return NextResponse.json({ error: "Method Not Allowed" }, { status: 405 });
-  }
-  const { env } = getRequestContext();
+export default async function handler(req: NextRequest, context: any) {
+  const { env } = context;
+  const url = new URL(req.url);
+  const gallery = url.searchParams.get('gallery') || 'default';
+
   try {
-    const { results } = await env.JIMI_DB.prepare(
-      `SELECT slug AS id, title, '/api/' || slug AS url
-       FROM gallery_sketches
-       ORDER BY rowid DESC
-       LIMIT 20`
-    ).all();
+    const query = `
+      SELECT slug AS id, title, '/api/' || slug AS url
+      FROM gallery_sketches
+      WHERE gallery = ?1
+      ORDER BY rowid DESC
+    `;
+    const { results } = await env.JIMI_DB.prepare(query).bind(gallery).all();
 
-    return NextResponse.json(results);
+    return new Response(JSON.stringify(results), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200,
+    });
   } catch (err: any) {
-    console.error("Gallery fetch error:", err);
-    return NextResponse.json(
-      { error: "Failed to fetch gallery" },
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
 

@@ -1,47 +1,35 @@
+// pages/gallery/[slug].tsx
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-
-type Image = {
-  id: number;
-  gallery: string;
-  url: string;
-  created_at: string;
-};
+import GalleryGrid from '@/components/GalleryGrid';
 
 export default function GalleryPage() {
   const router = useRouter();
   const { slug } = router.query;
-
-  const [images, setImages] = useState<Image[]>([]);
+  const [images, setImages] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!slug) return;
-
-    fetch(`/api/images?gallery=${slug}`)
-      .then(res => res.json())
-      .then((data: unknown) => {
-        if (Array.isArray(data)) {
-          setImages(data as Image[]);
-        } else {
-          console.error('Expected an array of images but got:', data);
-        }
-      })
-      .catch(err => {
-        console.error('Error fetching images:', err);
-      });
+    const load = async () => {
+      const res = await fetch(`/api/gallery?gallery=${slug}`);
+      const json = await res.json();
+      setImages(json);
+      setLoading(false);
+    };
+    load();
   }, [slug]);
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Gallery: {slug}</h1>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {images.map((img) => (
-          <div key={img.id} className="border rounded shadow">
-            <img src={img.url} alt={`Image ${img.id}`} className="w-full h-auto" />
-            <div className="text-sm text-gray-500 p-2">{new Date(img.created_at).toLocaleString()}</div>
-          </div>
-        ))}
-      </div>
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      <h1 className="text-2xl font-bold mb-6">Gallery: {slug}</h1>
+      {loading ? (
+        <p>Loading...</p>
+      ) : images.length > 0 ? (
+        <GalleryGrid images={images} />
+      ) : (
+        <p className="text-gray-500">No sketches in this gallery yet.</p>
+      )}
     </div>
   );
 }
