@@ -1,36 +1,31 @@
 // pages/api/gallery.ts
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import { getRequestContext } from "@cloudflare/next-on-pages";
+import { NextRequest, NextResponse } from "next/server";
+import { env } from "../../lib/db";  // adjust path if your db binding is elsewhere
 
-export const config = { runtime: "edge" };
+export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const gallery = url.searchParams.get("gallery")?.trim();
 
-export default async function handler(req: NextRequest) {
-  if (req.method !== "GET")
-    return NextResponse.json({ error: "Method Not Allowed" }, { status: 405 });
+  // Base SQL (returns slug, title, url and gallery name)
+  const base = `
+    SELECT
+      slug   AS id,
+      title,
+      '/api/' || slug AS url,
+      gallery
+    FROM gallery_sketches
+  `;
 
-  const { env } = getRequestContext();
-  const url = new URL(req.url);
-  const gallery = url.searchParams.get("gallery")?.trim() || "";
-
+  // Append a filter if ?gallery=<name> was passed
   const sql = gallery
-    ? `SELECT slug AS id, title, '/api/'||slug AS url, gallery
-         FROM gallery_sketches
-        WHERE gallery = ?
-        ORDER BY created_at DESC`
-    : `SELECT slug AS id, title, '/api/'||slug AS url, gallery
-         FROM gallery_sketches
-        ORDER BY created_at DESC`;
+    ? base + ` WHERE gallery = ?`
+    : base;
+  
+  const stmt = gallery
+    ? env.JIMI_DB.prepare(sql).bind(gallery)
+    : env.JIMI_DB.prepare(sql);
 
-  try {
-    const stmt = gallery
-      ? env.JIMI_DB.prepare(sql).bind(gallery)
-      : env.JIMI_DB.prepare(sql);
-    const { results } = await stmt.all();
-    return NextResponse.json(results);
-  } catch (err: any) {
-    console.error("Error fetching gallery:", err);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
-  }
+  const { results } = await stmt.all();
+  return NextResponse.json(results);
 }
 
