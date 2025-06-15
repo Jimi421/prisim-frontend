@@ -1,3 +1,4 @@
+// pages/index.tsx
 import Head from "next/head";
 import { useEffect, useState } from "react";
 import GalleryGrid from "../components/GalleryGrid";
@@ -13,25 +14,26 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchGallery = async () => {
+  useEffect(() => {
     setLoading(true);
     setError(null);
-    try {
-      const res = await fetch("/api/gallery");
-      if (!res.ok) throw new Error(res.statusText);
-      const data = await res.json();
-      if (!Array.isArray(data)) throw new Error("Invalid gallery data");
-      setImages(data);
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchGallery();
+    fetch("/api/gallery?gallery=default")
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json() as Promise<GalleryItem[]>;
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error("Invalid data format");
+        setImages(data);
+      })
+      .catch((err) => {
+        console.error("Failed to load gallery:", err);
+        setError(err.message);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   return (
@@ -43,7 +45,10 @@ export default function HomePage() {
         <meta property="og:description" content="World-class portfolio for digital artists" />
       </Head>
 
-      <main aria-label="Art gallery" className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main
+        aria-label="Art gallery"
+        className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10"
+      >
         <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white mb-8">
           Latest Uploads
         </h1>
@@ -55,7 +60,10 @@ export default function HomePage() {
             ))}
           </div>
         ) : error ? (
-          <div role="alert" className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-4 rounded-lg">
+          <div
+            role="alert"
+            className="bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 p-4 rounded-lg"
+          >
             Error loading gallery: {error}
           </div>
         ) : images.length === 0 ? (
