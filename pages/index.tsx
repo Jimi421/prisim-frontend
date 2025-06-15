@@ -18,26 +18,30 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch all sketches (no filter param)
   useEffect(() => {
-    fetch("/api/gallery")
-      .then((res) => {
+    async function loadAll() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/gallery");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<GalleryItem[]>;
-      })
-      .then((data) => {
+        const data: GalleryItem[] = await res.json();
         setAllImages(data);
         setFiltered(data);
-        // build unique gallery list
-        const names = Array.from(new Set(data.map((img) => img.gallery)));
-        setGalleries(names);
-      })
-      .catch((err) => {
+        // collect unique gallery names
+        setGalleries(Array.from(new Set(data.map((img) => img.gallery))));
+      } catch (err: any) {
         console.error("Failed to load gallery:", err);
         setError(err.message);
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadAll();
   }, []);
 
+  // when user changes selection, re-filter in-memory
   useEffect(() => {
     if (!selection) {
       setFiltered(allImages);
@@ -49,13 +53,12 @@ export default function HomePage() {
   return (
     <>
       <Head>
-        <title>Prisim – Gallery</title>
+        <title>Prisim – All Sketches</title>
       </Head>
-
       <main className="max-w-7xl mx-auto p-6">
         <h1 className="text-3xl font-bold mb-4">All Sketches</h1>
 
-        {/* filter dropdown */}
+        {/* gallery filter dropdown */}
         <div className="mb-6">
           <label className="mr-2">Show:</label>
           <select
@@ -80,8 +83,12 @@ export default function HomePage() {
           </div>
         ) : error ? (
           <p className="text-red-500">Error: {error}</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-gray-500">No sketches found.</p>
         ) : (
-          <GalleryGrid images={filtered.map(({ id, title, url }) => ({ id, title, url }))} />
+          <GalleryGrid
+            images={filtered.map(({ id, title, url }) => ({ id, title, url }))}
+          />
         )}
       </main>
     </>
