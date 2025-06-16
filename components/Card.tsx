@@ -3,7 +3,7 @@ import Image from "next/image";
 
 interface CardProps {
   title: string;
-  imageUrl: string;
+  imageUrl: string; // e.g. "/api/abc123"
   onClick?: () => void;
 }
 
@@ -20,8 +20,7 @@ export default function Card({ title, imageUrl, onClick }: CardProps) {
           alt={title}
           fill
           className="object-cover"
-          placeholder="blur"
-          blurDataURL="/placeholder.png"
+          unoptimized
         />
       </div>
       <div className="px-4 py-2 text-sm font-medium text-gray-800 dark:text-white truncate">
