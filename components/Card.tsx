@@ -1,9 +1,11 @@
+// components/Card.tsx
+
 import React from "react";
 import Image from "next/image";
 
 interface CardProps {
   title: string;
-  imageUrl: string; // e.g. "/api/abc123"
+  imageUrl: string; // e.g. "/api/abcd1234-..."
   onClick?: () => void;
 }
 
