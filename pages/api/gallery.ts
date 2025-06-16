@@ -3,32 +3,49 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getRequestContext } from "@cloudflare/next-on-pages";
 
-export const config = {
-  runtime: "edge",
-};
+export const config = { runtime: "edge" };
 
 export default async function GET(request: NextRequest) {
-  // pull your D1 binding out of the edge context
   const { env } = getRequestContext();
-
-  // read the "gallery" param (default to "default")
   const url = new URL(request.url);
-  const gallery = url.searchParams.get("gallery")?.trim() || "default";
 
-  // only return sketches from that gallery, ordered by newest first
-  const sql = `
-    SELECT
-      slug AS id,
-      title,
-      '/api/' || slug AS url
-    FROM gallery_sketches
-    WHERE gallery = ?
-    ORDER BY created_at DESC
-  `;
+  // Grab the optional ?gallery= parameter
+  const galleryParam = url.searchParams.get("gallery")?.trim();
+
+  // Build SQL dynamically: no WHERE clause if no galleryParam
+  let sql: string;
+  let stmt: ReturnType<typeof env.JIMI_DB.prepare>;
+
+  if (!galleryParam) {
+    // 1️⃣ No filter: return everything
+    sql = `
+      SELECT
+        slug AS id,
+        title,
+        gallery,
+        '/api/' || slug AS url
+      FROM gallery_sketches
+      ORDER BY created_at DESC
+    `;
+    stmt = env.JIMI_DB.prepare(sql);
+  } else {
+    // 2️⃣ Filtered by specific gallery
+    sql = `
+      SELECT
+        slug AS id,
+        title,
+        gallery,
+        '/api/' || slug AS url
+      FROM gallery_sketches
+      WHERE gallery = ?
+      ORDER BY created_at DESC
+    `;
+    stmt = env.JIMI_DB.prepare(sql).bind(galleryParam);
+  }
 
   try {
-    const stmt = env.JIMI_DB.prepare(sql).bind(gallery);
     const { results } = await stmt.all();
+    // Return an array of { id, title, gallery, url }
     return NextResponse.json(results);
   } catch (err: any) {
     console.error("Error fetching gallery:", err);
