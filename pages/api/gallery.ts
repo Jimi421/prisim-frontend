@@ -1,58 +1,47 @@
 // pages/api/gallery.ts
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getRequestContext } from "@cloudflare/next-on-pages";
+import { getCloudflareContext } from "@opennextjs/cloudflare";
 
-export const config = { runtime: "edge" };
+// ❌ Removed: export const config = { runtime: "edge" };
 
 export default async function GET(request: NextRequest) {
-  const { env } = getRequestContext();
+  const { env } = getCloudflareContext();
   const url = new URL(request.url);
-
-  // Grab the optional ?gallery= parameter
   const galleryParam = url.searchParams.get("gallery")?.trim();
 
-  // Build SQL dynamically: no WHERE clause if no galleryParam
-  let sql: string;
-  let stmt: ReturnType<typeof env.JIMI_DB.prepare>;
+  const tableName = "sketches";  // adjust if needed
 
-  if (!galleryParam) {
-    // 1️⃣ No filter: return everything
-    sql = `
-      SELECT
-        slug AS id,
-        title,
-        gallery,
-        '/api/' || slug AS url
-      FROM gallery_sketches
-      ORDER BY created_at DESC
-    `;
-    stmt = env.JIMI_DB.prepare(sql);
+  let baseQuery = `
+    SELECT slug AS id, title, gallery, file_key
+    FROM ${tableName}
+    {{WHERE}}
+    ORDER BY created_at DESC
+  `;
+  const params: unknown[] = [];
+
+  if (galleryParam) {
+    baseQuery = baseQuery.replace("{{WHERE}}", "WHERE gallery = ?");
+    params.push(galleryParam);
   } else {
-    // 2️⃣ Filtered by specific gallery
-    sql = `
-      SELECT
-        slug AS id,
-        title,
-        gallery,
-        '/api/' || slug AS url
-      FROM gallery_sketches
-      WHERE gallery = ?
-      ORDER BY created_at DESC
-    `;
-    stmt = env.JIMI_DB.prepare(sql).bind(galleryParam);
+    baseQuery = baseQuery.replace("{{WHERE}}", "");
   }
 
   try {
+    const stmt = env.JIMI_DB.prepare(baseQuery);
+    if (params.length) stmt.bind(...params);
     const { results } = await stmt.all();
-    // Return an array of { id, title, gallery, url }
-    return NextResponse.json(results);
+
+    const items = results.map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      gallery: r.gallery,
+      url: `/api/${r.file_key}`,
+    }));
+
+    return NextResponse.json(items);
   } catch (err: any) {
     console.error("Error fetching gallery:", err);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
-
