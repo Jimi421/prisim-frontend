@@ -9,9 +9,9 @@ export default async function handler(request: NextRequest) {
   const { env } = getCloudflareContext();
 
   try {
-    // Adjust your table name if needed
+    // Fetch records from the gallery_sketches table
     const { results } = await env.JIMI_DB
-      .prepare("SELECT * FROM images")
+      .prepare("SELECT * FROM gallery_sketches")
       .all();
 
     return NextResponse.json(results);

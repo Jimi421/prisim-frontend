@@ -10,7 +10,8 @@ export default async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const galleryParam = url.searchParams.get("gallery")?.trim();
 
-  const tableName = "sketches";  // adjust if needed
+  // query gallery entries from the new table
+  const tableName = "gallery_sketches";
 
   let baseQuery = `
     SELECT slug AS id, title, gallery, file_key

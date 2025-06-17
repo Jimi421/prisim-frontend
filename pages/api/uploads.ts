@@ -50,9 +50,9 @@ export default async function handler(request: NextRequest) {
       httpMetadata: { contentType: file.type },
     });
 
-    // Insert metadata into D1 (adjust table & columns as needed)
+    // Insert metadata into D1 using the gallery_sketches table
     await env.JIMI_DB.prepare(
-      `INSERT INTO sketches (slug, title, gallery, file_key, notes, black_and_white)
+      `INSERT INTO gallery_sketches (slug, title, gallery, file_key, notes, black_and_white)
        VALUES (?, ?, ?, ?, ?, ?)`
     ).bind(key, title, style, key, notes, blackAndWhite ? 1 : 0).run();
 
