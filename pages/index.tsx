@@ -18,7 +18,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch all sketches (no filter param)
+  // Fetch all images (no filter param)
   useEffect(() => {
     async function loadAll() {
       setLoading(true);
@@ -69,7 +69,7 @@ export default function HomePage() {
             <option value="">All</option>
             {galleries.map((g) => (
               <option key={g} value={g}>
-                {g.charAt(0).toUpperCase() + g.slice(1)}
+                {(g?.charAt?.(0)?.toUpperCase() ?? "") + (g?.slice?.(1) ?? "")}
               </option>
             ))}
           </select>
