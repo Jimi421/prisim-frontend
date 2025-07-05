@@ -2,7 +2,7 @@
 
 The frontend interface for **Prisim**, a modern web-based media gallery. Built with React and Tailwind CSS, this UI supports uploading, previewing, and organizing image and video content.
 
-## Features
+## Features ##
 
 - Responsive, mobile-friendly UI
 - File upload preview
