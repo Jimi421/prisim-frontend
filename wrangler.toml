@@ -1,3 +1,4 @@
+##wrangler file
 name = "prisim-frontend"
 pages_build_output_dir = ".open-next/output"
 compatibility_date = "2025-06-16"
