@@ -6,21 +6,15 @@ compatibility_flags = ["nodejs_compat","global_fetch_strictly_public"]
 
 main = ".open-next/worker.js"
 
-[assets]
-  directory = ".open-next/assets"
-  binding   = "ASSETS"
-
 [[d1_databases]]
   binding     = "JIMI_DB"
   database_name = "prisim-frontend"
   database_id   = "1354e0eb-58e2-4041-94ba-9bbd5a06fb6a"
 
-# Your bucket for sketches
 [[r2_buckets]]
   binding     = "PRISIM_BUCKET"
   bucket_name = "prisim"
 
-# Also use the same bucket for the ISR cache
 [[r2_buckets]]
   binding     = "NEXT_INC_CACHE_R2_BUCKET"
   bucket_name = "prisim"
