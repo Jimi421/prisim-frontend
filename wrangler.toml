@@ -1,6 +1,6 @@
 ##wrangler file
 name = "prisim-frontend"
-pages_build_output_dir = ".open-next/output"
+pages_build_output_dir = ".open-next"
 compatibility_date = "2025-06-16"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
