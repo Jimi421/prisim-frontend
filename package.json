@@ -5,9 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "start": "open-next start"
   },
   "dependencies": {
     "next": "^14.2.29",
@@ -22,6 +20,7 @@
     "@types/react": "^18.0.28",
     "autoprefixer": "^10.4.14",
     "esbuild": "^0.25.5",
+    "open-next": "^3.6.5",
     "postcss": "^8.4.24",
     "tailwindcss": "^3.3.2",
     "typescript": "^5.0.4",
