@@ -9,28 +9,25 @@ export async function onRequest(context) {
   }
 
   try {
+    let stmt;
     if (gallery) {
-      // Return images for this gallery
-      const stmt = env.JIMI_DB.prepare(`
-        SELECT i.id, i.url, COALESCE(i.title, '') AS title, g.slug AS gallery
-        FROM images i
-        JOIN gallery_images gi ON gi.image_id = i.id
-        JOIN galleries g ON g.id = gi.gallery_id
-        WHERE g.slug = ?
-        ORDER BY gi.position, i.created_at DESC
+      // Return all sketches for a specific gallery/group name
+      stmt = env.JIMI_DB.prepare(`
+        SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery
+        FROM gallery_sketches
+        WHERE gallery = ?
+        ORDER BY created_at DESC
       `).bind(gallery);
-      const { results } = await stmt.all();
-      return Response.json(results);
     } else {
-      // Return all galleries for dropdown/filter
-      const stmt = env.JIMI_DB.prepare(`
-        SELECT slug, name
-        FROM galleries
-        ORDER BY name
+      // Return all sketches, newest first
+      stmt = env.JIMI_DB.prepare(`
+        SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery
+        FROM gallery_sketches
+        ORDER BY created_at DESC
       `);
-      const { results } = await stmt.all();
-      return Response.json(results);
     }
+    const { results } = await stmt.all();
+    return Response.json(results);
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err.message || "Server error" }),
@@ -38,4 +35,3 @@ export async function onRequest(context) {
     );
   }
 }
-
