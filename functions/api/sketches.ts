@@ -1,4 +1,3 @@
-// /functions/api/sketches.ts
 export async function onRequest(context) {
   const { request, env } = context;
   if (request.method !== "GET") {
@@ -6,8 +5,8 @@ export async function onRequest(context) {
   }
   try {
     const stmt = env.JIMI_DB.prepare(`
-      SELECT id, slug, title, style, black_and_white, notes, url, created_at
-      FROM sketches
+      SELECT id, slug, title, style, black_and_white, notes, url, created_at, gallery
+      FROM gallery_sketches
       ORDER BY created_at DESC
     `);
     const { results: sketches } = await stmt.all();
@@ -19,4 +18,3 @@ export async function onRequest(context) {
     );
   }
 }
-
