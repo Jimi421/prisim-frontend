@@ -1,19 +1,18 @@
-##wrangler file
-name = "prisim-frontend"
-pages_build_output_dir = ".open-next"
-compatibility_date = "2025-06-16"
-compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+name                    = "prisim-frontend"
+pages_build_output_dir  = ".open-next"
+compatibility_date      = "2025-06-16"
+compatibility_flags     = ["nodejs_compat", "global_fetch_strictly_public"]
 
 [[d1_databases]]
-  binding = "JIMI_DB"
+  binding       = "JIMI_DB"
   database_name = "prisim-frontend"
-  database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fb6a"
+  database_id   = "1354e0eb-58e2-4041-94ba-9bbd5a06fb6a"
 
 [[r2_buckets]]
-  binding = "PRISIM_BUCKET"
+  binding     = "PRISIM_BUCKET"
   bucket_name = "prisim"
 
 [[r2_buckets]]
-  binding = "NEXT_INC_CACHE_R2_BUCKET"
+  binding     = "NEXT_INC_CACHE_R2_BUCKET"
   bucket_name = "prisim"
 
