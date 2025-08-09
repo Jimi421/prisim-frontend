@@ -1,58 +1,70 @@
-// /functions/api/uploads.ts
+// Edge API Route: POST /api/uploads (multipart/form-data)
+// fields: file, title, style, notes, blackAndWhite ("true"/"false"), gallery
+export const config = { runtime: 'edge' as const };
 
-export async function onRequest(context) {
-  const { request, env } = context;
+function json(data: unknown, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(data), {
+    headers: { 'content-type': 'application/json' },
+    ...init,
+  });
+}
 
-  if (request.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
-  }
+function slugify(s: string) {
+  return s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+export default async function handler(req: Request) {
+  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+
+  // @ts-expect-error provided by next-on-pages
+  const { PRISIM_BUCKET, JIMI_DB } = (globalThis as any).env ?? {};
+  if (!PRISIM_BUCKET?.put) return json({ ok: false, error: 'R2 bucket not configured' }, { status: 500 });
+  if (!JIMI_DB?.prepare) return json({ ok: false, error: 'Database not configured' }, { status: 500 });
 
   try {
-    const formData = await request.formData();
-    const file = formData.get("file");
-    const title = formData.get("title")?.toString() || "";
-    const style = formData.get("style")?.toString() || "";
-    const notes = formData.get("notes")?.toString() || "";
-    const blackAndWhite = formData.get("blackAndWhite") === "true" ? 1 : 0;
-    const gallery = formData.get("gallery")?.toString() || "";
-    // Generate a slug/key for this upload
-    const ext = (file instanceof File && file.name.includes(".")) ? file.name.split(".").pop() : "png";
-    const slug = crypto.randomUUID();
-    const key = `gallery_sketches/${slug}.${ext}`;
+    const form = await req.formData();
+    const file = form.get('file') as File | null;
+    if (!file) return json({ ok: false, error: 'Missing file' }, { status: 400 });
 
-    if (!(file instanceof File)) {
-      return Response.json({ ok: false, error: "No file uploaded" }, { status: 400 });
-    }
+    const title = String(form.get('title') ?? '');
+    const style = String(form.get('style') ?? '');
+    const notes = String(form.get('notes') ?? '');
+    const blackAndWhite = String(form.get('blackAndWhite') ?? 'false') === 'true' ? 1 : 0;
+    const gallery = String(form.get('gallery') ?? '');
 
-    // Upload file to R2
-    await env.PRISIM_BUCKET.put(key, await file.arrayBuffer(), {
-      httpMetadata: { contentType: file.type }
+    const bytes = await file.arrayBuffer();
+
+    // Create object key and public URL (adjust if you use custom domain)
+    const keyBase = `${Date.now()}-${slugify(title || file.name)}`;
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    const key = ext ? `${keyBase}.${ext}` : keyBase;
+
+    await PRISIM_BUCKET.put(key, bytes, {
+      httpMetadata: { contentType: file.type || 'application/octet-stream' },
     });
 
-    // Build the public URL for the image (adjust as needed for your R2 setup)
-    const url = `https://pub-cdn.cloudflare.dev/${env.PRISIM_BUCKET.bucket_name}/${key}`;
+    // If you serve R2 through a public bucket domain, replace the URL format here
+    const url = `https://${'prisim'}.r2.cloudflarestorage.com/${key}`;
 
-    // Insert metadata into D1
-    await env.JIMI_DB.prepare(`
-      INSERT INTO gallery_sketches 
-        (slug, title, style, notes, black_and_white, created_at, url, gallery)
-      VALUES (?, ?, ?, ?, ?, datetime('now'), ?, ?)
-    `).bind(
-      slug,      // slug (unique id)
-      title,
-      style,
-      notes,
-      blackAndWhite,
-      url,
-      gallery
-    ).run();
+    const slug = slugify(title || keyBase);
 
-    return Response.json({ ok: true, key, url, slug });
-  } catch (err) {
-    return new Response(
-      JSON.stringify({ ok: false, error: err.message || "Upload server error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    await JIMI_DB
+      .prepare(
+        `INSERT INTO gallery_sketches (slug, title, style, notes, black_and_white, url, gallery)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(slug, title, style, notes, blackAndWhite, url, gallery || null)
+      .run();
+
+    return json({ ok: true, key, url, slug });
+  } catch (err: any) {
+    return json({ ok: false, error: err?.message ?? 'Upload server error' }, { status: 500 });
   }
 }
 

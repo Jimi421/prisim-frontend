@@ -1,5 +1,5 @@
 name = "prisim-frontend"
-main = ".open-next/server-functions/default/index.mjs"
+pages_build_output_dir = ".vercel/output/static"
 compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 

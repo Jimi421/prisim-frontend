@@ -1,27 +1,42 @@
-import type { NextApiRequest, NextApiResponse } from "next";
+// Edge API Route: GET /api/sketches
+export const config = { runtime: 'edge' as const };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const env: any = (global as any).env || {};
+type Row = {
+  id: number;
+  slug: string;
+  title: string;
+  style: string | null;
+  black_and_white: number | 0 | 1;
+  notes: string | null;
+  url: string | null;
+  created_at: string;
+  gallery: string | null;
+};
 
-  if (req.method !== "GET") {
-    res.status(405).send("Method Not Allowed");
-    return;
-  }
+function json(data: unknown, init: ResponseInit = {}) {
+  return new Response(JSON.stringify(data), {
+    headers: { 'content-type': 'application/json' },
+    ...init,
+  });
+}
 
-  if (!env.JIMI_DB || typeof env.JIMI_DB.prepare !== "function") {
-    res.status(500).json({ ok: false, error: "Database not configured" });
-    return;
-  }
+export default async function handler(req: Request) {
+  if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+
+  // @ts-expect-error provided by next-on-pages
+  const { JIMI_DB } = (globalThis as any).env ?? {};
+  if (!JIMI_DB?.prepare) return json({ ok: false, error: 'Database not configured' }, { status: 500 });
 
   try {
-    const stmt = env.JIMI_DB.prepare(`
+    const stmt = JIMI_DB.prepare(`
       SELECT id, slug, title, style, black_and_white, notes, url, created_at, gallery
       FROM gallery_sketches
       ORDER BY created_at DESC
     `);
-    const { results: sketches } = await stmt.all();
-    res.status(200).json({ ok: true, sketches });
+    const { results } = await stmt.all<Row>();
+    return json({ ok: true, sketches: results });
   } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message || "Server error" });
+    return json({ ok: false, error: err?.message ?? 'Server error' }, { status: 500 });
   }
 }
+
