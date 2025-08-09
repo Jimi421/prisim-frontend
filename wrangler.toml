@@ -3,11 +3,6 @@ main = ".open-next/server-functions/default/index.mjs"
 compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 
-[vars]
-JIMI_DB = "prisim-frontend"
-PRISIM_BUCKET = "prisim"
-NEXT_INC_CACHE_R2_BUCKET = "prisim"
-
 [[r2_buckets]]
 binding = "PRISIM_BUCKET"
 bucket_name = "prisim"
