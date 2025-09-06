@@ -4,14 +4,13 @@ import type { NextApiRequest, NextApiResponse } from "next";
 type ItemRow = {
   id: string;
   gallery_id: string;
-  key: string;         // R2 object key
+  key: string;        // R2 object key
   mime: string;
   title: string;
-  tags: string;        // JSON array string
-  favorite: number;    // 0/1
-  created_at: number;  // unix seconds
+  tags: string;       // JSON array string
+  favorite: number;   // 0/1
+  created_at: number; // unix seconds
 };
-
 type GalleryRow = { id: string };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -21,10 +20,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    // Cloudflare Pages (next-on-pages) exposes bindings on globalThis.env
-    // We also fall back to global env names if you used JIMI_DB earlier.
+    // Cloudflare Pages bindings (via next-on-pages) live on globalThis.env.
+    // We also support older/alt names like JIMI_DB.
     const env: any = (globalThis as any)?.env ?? {};
-    const DB = env.DB ?? env.JIMI_DB;   // support either binding name
+    const DB = env.DB ?? env.JIMI_DB;
 
     if (!DB?.prepare) {
       res.status(500).json({ error: "Database not configured (DB binding missing)" });
