@@ -1,5 +1,12 @@
-// Edge API Route: GET /api/gallery?gallery=<slug>
-export const config = { runtime: 'edge' as const };
+// pages/api/gallery.ts
+import type { NextRequest } from 'next/server';
+
+export const config = { runtime: 'edge' };
+
+type Env = {
+  JIMI_DB: D1Database;
+  PRISIM_BUCKET: R2Bucket;
+};
 
 type Row = {
   id: number;
@@ -20,36 +27,41 @@ function json(data: unknown, init: ResponseInit = {}) {
   });
 }
 
-export default async function handler(req: Request) {
-  if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+export default async function handler(request: NextRequest, env: Env) {
+  if (request.method !== 'GET') {
+    return new Response('Method Not Allowed', { status: 405 });
+  }
 
-  // @ts-expect-error provided by next-on-pages
-  const { JIMI_DB } = (globalThis as any).env ?? {};
-  if (!JIMI_DB?.prepare) return json({ error: 'Database not configured' }, { status: 500 });
+  // Access bindings from env parameter
+  if (!env?.JIMI_DB) {
+    console.error('JIMI_DB binding not found');
+    return json({ error: 'Database not configured' }, { status: 500 });
+  }
 
-  const url = new URL(req.url);
-  const gallery = url.searchParams.get('gallery') ?? undefined;
+  const { searchParams } = new URL(request.url);
+  const gallery = searchParams.get('gallery') ?? undefined;
 
   try {
     let stmt;
     if (gallery) {
-      stmt = JIMI_DB.prepare(`
+      stmt = env.JIMI_DB.prepare(`
         SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery
         FROM gallery_sketches
         WHERE gallery = ?
         ORDER BY created_at DESC
       `).bind(gallery);
     } else {
-      stmt = JIMI_DB.prepare(`
+      stmt = env.JIMI_DB.prepare(`
         SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery
         FROM gallery_sketches
         ORDER BY created_at DESC
       `);
     }
+    
     const { results } = await stmt.all<Row>();
     return json(results);
   } catch (err: any) {
+    console.error('Database query error:', err);
     return json({ error: err?.message ?? 'Server error' }, { status: 500 });
   }
 }
-
