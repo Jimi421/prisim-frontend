@@ -1,20 +1,17 @@
 name = "prisim-frontend"
 pages_build_output_dir = ".vercel/output/static"
 compatibility_date = "2025-07-01"
-compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+compatibility_flags = ["nodejs_compat"]  # (you can drop global_fetch_strictly_public)
 
+# --- R2 bucket binding (used by code as env.ASSETS) ---
 [[r2_buckets]]
-binding = "PRISIM_BUCKET"
-bucket_name = "prisim"
+binding = "ASSETS"
+bucket_name = "prisim"           # matches the bucket in your screenshots
 preview_bucket_name = "prisim"
 
-[[r2_buckets]]
-binding = "NEXT_INC_CACHE_R2_BUCKET"
-bucket_name = "prisim"
-preview_bucket_name = "prisim"
-
+# --- D1 database binding (used by code as env.DB) ---
 [[d1_databases]]
-binding = "JIMI_DB"
+binding = "DB"
 database_name = "prisim-frontend"
-database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fb6a"
+database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"
 

@@ -1,42 +1,34 @@
-// Edge API Route: GET /api/sketches
-export const config = { runtime: 'edge' as const };
+import type { NextApiRequest, NextApiResponse } from "next";
 
-type Row = {
-  id: number;
-  slug: string;
+type ItemRow = {
+  id: string;
+  gallery_id: string;
+  key: string;
+  mime: string;
   title: string;
-  style: string | null;
-  black_and_white: number | 0 | 1;
-  notes: string | null;
-  url: string | null;
-  created_at: string;
-  gallery: string | null;
+  tags: string;
+  favorite: number;
+  created_at: number;
 };
 
-function json(data: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(data), {
-    headers: { 'content-type': 'application/json' },
-    ...init,
-  });
-}
-
-export default async function handler(req: Request) {
-  if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
-
-  // @ts-expect-error provided by next-on-pages
-  const { JIMI_DB } = (globalThis as any).env ?? {};
-  if (!JIMI_DB?.prepare) return json({ ok: false, error: 'Database not configured' }, { status: 500 });
-
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const stmt = JIMI_DB.prepare(`
-      SELECT id, slug, title, style, black_and_white, notes, url, created_at, gallery
-      FROM gallery_sketches
-      ORDER BY created_at DESC
-    `);
-    const { results } = await stmt.all<Row>();
-    return json({ ok: true, sketches: results });
+    if (req.method !== "GET") return res.status(405).end("Method Not Allowed");
+
+    const env: any = (globalThis as any)?.env ?? {};
+    const DB = env.DB ?? env.JIMI_DB;
+    if (!DB?.prepare) return res.status(500).json({ error: "Database not configured" });
+
+    // If you filter sketches by tag “sketch” or a dedicated table, adjust the query here.
+    const { results } = await DB.prepare(
+      "SELECT id, gallery_id, key, mime, title, tags, favorite, created_at \
+       FROM items ORDER BY created_at DESC"
+    ).all();
+
+    return res.status(200).json(results as ItemRow[]);
   } catch (err: any) {
-    return json({ ok: false, error: err?.message ?? 'Server error' }, { status: 500 });
+    console.error("sketches API error:", err);
+    return res.status(500).json({ error: String(err?.message || err) });
   }
 }
 

@@ -1,70 +1,54 @@
-// Edge API Route: POST /api/uploads (multipart/form-data)
-// fields: file, title, style, notes, blackAndWhite ("true"/"false"), gallery
-export const config = { runtime: 'edge' as const };
+import type { NextApiRequest, NextApiResponse } from "next";
 
-function json(data: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(data), {
-    headers: { 'content-type': 'application/json' },
-    ...init,
-  });
-}
+export const config = {
+  api: { bodyParser: false } // we handle multipart ourselves
+};
 
-function slugify(s: string) {
-  return s
-    .toLowerCase()
-    .normalize('NFKD')
-    .replace(/[^\w\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
+type GalleryRow = { id: string };
 
-export default async function handler(req: Request) {
-  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
-
-  // @ts-expect-error provided by next-on-pages
-  const { PRISIM_BUCKET, JIMI_DB } = (globalThis as any).env ?? {};
-  if (!PRISIM_BUCKET?.put) return json({ ok: false, error: 'R2 bucket not configured' }, { status: 500 });
-  if (!JIMI_DB?.prepare) return json({ ok: false, error: 'Database not configured' }, { status: 500 });
-
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const form = await req.formData();
-    const file = form.get('file') as File | null;
-    if (!file) return json({ ok: false, error: 'Missing file' }, { status: 400 });
+    if (req.method !== "POST") return res.status(405).end("Method Not Allowed");
 
-    const title = String(form.get('title') ?? '');
-    const style = String(form.get('style') ?? '');
-    const notes = String(form.get('notes') ?? '');
-    const blackAndWhite = String(form.get('blackAndWhite') ?? 'false') === 'true' ? 1 : 0;
-    const gallery = String(form.get('gallery') ?? '');
+    const env: any = (globalThis as any)?.env ?? {};
+    const DB = env.DB ?? env.JIMI_DB;
+    const ASSETS: R2Bucket | undefined = env.ASSETS;
+    if (!DB?.prepare) return res.status(500).json({ error: "Database not configured" });
+    if (!ASSETS?.put) return res.status(500).json({ error: "R2 bucket not configured" });
 
-    const bytes = await file.arrayBuffer();
+    const contentType = req.headers["content-type"] || "";
+    if (!String(contentType).includes("multipart/form-data")) {
+      return res.status(400).json({ error: "Expected multipart/form-data" });
+    }
 
-    // Create object key and public URL (adjust if you use custom domain)
-    const keyBase = `${Date.now()}-${slugify(title || file.name)}`;
-    const ext = (file.name.split('.').pop() || '').toLowerCase();
-    const key = ext ? `${keyBase}.${ext}` : keyBase;
+    // Convert Node stream -> Web Response to use .formData()
+    const webResp = new (globalThis as any).Response(req as any, { headers: { "content-type": String(contentType) } });
+    const form = await webResp.formData();
 
-    await PRISIM_BUCKET.put(key, bytes, {
-      httpMetadata: { contentType: file.type || 'application/octet-stream' },
+    const file = form.get("file") as File | null;
+    const gallerySlug = String(form.get("gallery") || "");
+
+    if (!file) return res.status(400).json({ error: "Missing file" });
+    if (!gallerySlug) return res.status(400).json({ error: "Missing gallery slug" });
+
+    const g = (await DB.prepare("SELECT id FROM galleries WHERE slug=?").bind(gallerySlug).first()) as GalleryRow | null;
+    if (!g?.id) return res.status(404).json({ error: "Gallery not found" });
+
+    const objectKey = `${gallerySlug}/${Date.now()}-${file.name}`;
+
+    await ASSETS.put(objectKey, (file as any).stream(), {
+      httpMetadata: { contentType: (file as any).type }
     });
 
-    // If you serve R2 through a public bucket domain, replace the URL format here
-    const url = `https://${'prisim'}.r2.cloudflarestorage.com/${key}`;
+    const id = crypto.randomUUID();
+    await DB.prepare(
+      "INSERT INTO items (id, gallery_id, key, mime, title) VALUES (?, ?, ?, ?, ?)"
+    ).bind(id, g.id, objectKey, (file as any).type, file.name).run();
 
-    const slug = slugify(title || keyBase);
-
-    await JIMI_DB
-      .prepare(
-        `INSERT INTO gallery_sketches (slug, title, style, notes, black_and_white, url, gallery)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`
-      )
-      .bind(slug, title, style, notes, blackAndWhite, url, gallery || null)
-      .run();
-
-    return json({ ok: true, key, url, slug });
+    return res.status(201).json({ id, key: objectKey });
   } catch (err: any) {
-    return json({ ok: false, error: err?.message ?? 'Upload server error' }, { status: 500 });
+    console.error("uploads API error:", err);
+    return res.status(500).json({ error: String(err?.message || err) });
   }
 }
 

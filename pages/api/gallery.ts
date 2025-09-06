@@ -1,59 +1,41 @@
-// functions/api/gallery.ts
+import type { NextApiRequest, NextApiResponse } from "next";
 
-export const onRequestGet: PagesFunction<{ DB: D1Database }> = async ({ env }) => {
-  try {
-    // Define the shape of your gallery row
-    type GalleryRow = {
-      id: string;
-      slug: string;
-      title: string;
-      description: string;
-      created_at: number;
-    };
-
-    const stmt = env.DB.prepare(
-      "SELECT id, slug, title, description, created_at FROM galleries ORDER BY created_at DESC"
-    );
-
-    // No generics here — cast the result after
-    const { results } = await stmt.all();
-    return Response.json(results as GalleryRow[]);
-  } catch (err: any) {
-    console.error("Database query error (gallery GET):", err);
-    return new Response(
-      JSON.stringify({ error: "Failed to fetch galleries", details: String(err) }),
-      { status: 500, headers: { "content-type": "application/json" } }
-    );
-  }
+type GalleryRow = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  created_at: number;
 };
 
-export const onRequestPost: PagesFunction<{ DB: D1Database }> = async ({ request, env }) => {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const body = await request.json<{ slug: string; title: string; description?: string }>();
-    const { slug, title, description = "" } = body;
+    const env: any = (globalThis as any)?.env ?? {};
+    const DB = env.DB ?? env.JIMI_DB;
+    if (!DB?.prepare) return res.status(500).json({ error: "Database not configured" });
 
-    if (!slug || !title) {
-      return new Response(
-        JSON.stringify({ error: "Missing slug or title" }),
-        { status: 400, headers: { "content-type": "application/json" } }
-      );
+    if (req.method === "GET") {
+      const { results } = await DB.prepare(
+        "SELECT id, slug, title, description, created_at FROM galleries ORDER BY created_at DESC"
+      ).all();
+      return res.status(200).json(results as GalleryRow[]);
     }
 
-    const id = crypto.randomUUID();
+    if (req.method === "POST") {
+      const { slug, title, description = "" } = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      if (!slug || !title) return res.status(400).json({ error: "Missing slug or title" });
 
-    await env.DB.prepare(
-      "INSERT INTO galleries (id, slug, title, description) VALUES (?, ?, ?, ?)"
-    )
-      .bind(id, slug, title, description)
-      .run();
+      const id = crypto.randomUUID();
+      await DB.prepare("INSERT INTO galleries (id, slug, title, description) VALUES (?, ?, ?, ?)")
+        .bind(id, slug, title, description).run();
 
-    return Response.json({ id, slug, title, description });
+      return res.status(201).json({ id, slug, title, description });
+    }
+
+    return res.status(405).end("Method Not Allowed");
   } catch (err: any) {
-    console.error("Database insert error (gallery POST):", err);
-    return new Response(
-      JSON.stringify({ error: "Failed to create gallery", details: String(err) }),
-      { status: 500, headers: { "content-type": "application/json" } }
-    );
+    console.error("gallery API error:", err);
+    return res.status(500).json({ error: String(err?.message || err) });
   }
-};
+}
 
