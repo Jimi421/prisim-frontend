@@ -1,66 +1,50 @@
-// pages/api/images.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
 type ItemRow = {
   id: string;
   gallery_id: string;
-  key: string;        // R2 object key
+  key: string;
   mime: string;
   title: string;
-  tags: string;       // JSON array string
-  favorite: number;   // 0/1
-  created_at: number; // unix seconds
+  tags: string;
+  favorite: number;
+  created_at: number;
 };
-type GalleryRow = { id: string };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    if (req.method !== "GET") {
-      res.status(405).end("Method Not Allowed");
-      return;
-    }
+    if (req.method !== "GET") return res.status(405).end("Method Not Allowed");
 
-    // Cloudflare Pages bindings (via next-on-pages) live on globalThis.env.
-    // We also support older/alt names like JIMI_DB.
     const env: any = (globalThis as any)?.env ?? {};
     const DB = env.DB ?? env.JIMI_DB;
+    const R2: R2Bucket | undefined =
+      env.PRISIM_R2 ?? env.BUCKET ?? env.ASSETS ?? env.PRISIM_BUCKET;
 
-    if (!DB?.prepare) {
-      res.status(500).json({ error: "Database not configured (DB binding missing)" });
-      return;
-    }
+    if (!DB?.prepare) return res.status(500).json({ error: "Database not configured" });
+    if (!R2?.get) return res.status(500).json({ error: "R2 bucket not configured" });
 
-    // Optional filter: ?slug=my-gallery
-    const slug = req.query.slug ? String(req.query.slug) : undefined;
+    const { results } = await DB.prepare(
+      "SELECT id, gallery_id, key, mime, title, tags, favorite, created_at \
+       FROM items ORDER BY created_at DESC"
+    ).all();
 
-    let galleryId: string | undefined;
-    if (slug) {
-      const g = (await DB.prepare("SELECT id FROM galleries WHERE slug = ?")
-        .bind(slug)
-        .first()) as GalleryRow | null;
+    // Attach signed URLs for preview
+    const enriched = await Promise.all(
+      (results as ItemRow[]).map(async (row) => {
+        try {
+          const obj = await R2.head(row.key);
+          const url = obj ? `https://pub-${env.PRISIM_R2 || env.BUCKET}.r2.dev/${row.key}` : null;
+          return { ...row, url };
+        } catch {
+          return { ...row, url: null };
+        }
+      })
+    );
 
-      if (!g?.id) {
-        res.status(404).json({ error: "Gallery not found" });
-        return;
-      }
-      galleryId = g.id;
-    }
-
-    const stmt = galleryId
-      ? DB.prepare(
-          "SELECT id, gallery_id, key, mime, title, tags, favorite, created_at \
-           FROM items WHERE gallery_id = ? ORDER BY created_at DESC"
-        ).bind(galleryId)
-      : DB.prepare(
-          "SELECT id, gallery_id, key, mime, title, tags, favorite, created_at \
-           FROM items ORDER BY created_at DESC"
-        );
-
-    const { results } = await stmt.all();
-    res.status(200).json(results as ItemRow[]);
+    return res.status(200).json(enriched);
   } catch (err: any) {
     console.error("images API error:", err);
-    res.status(500).json({ error: String(err?.message || err) });
+    return res.status(500).json({ error: String(err?.message || err) });
   }
 }
 

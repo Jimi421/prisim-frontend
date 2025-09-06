@@ -22,12 +22,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (req.method === "POST") {
-      const { slug, title, description = "" } = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      const { slug, title, description = "" } =
+        typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+
       if (!slug || !title) return res.status(400).json({ error: "Missing slug or title" });
 
       const id = crypto.randomUUID();
-      await DB.prepare("INSERT INTO galleries (id, slug, title, description) VALUES (?, ?, ?, ?)")
-        .bind(id, slug, title, description).run();
+      await DB.prepare(
+        "INSERT INTO galleries (id, slug, title, description) VALUES (?, ?, ?, ?)"
+      )
+        .bind(id, slug, title, description)
+        .run();
 
       return res.status(201).json({ id, slug, title, description });
     }
