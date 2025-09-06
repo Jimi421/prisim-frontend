@@ -1,67 +1,59 @@
-// pages/api/gallery.ts
-import type { NextRequest } from 'next/server';
+// functions/api/gallery.ts
 
-export const config = { runtime: 'edge' };
-
-type Env = {
-  JIMI_DB: D1Database;
-  PRISIM_BUCKET: R2Bucket;
-};
-
-type Row = {
-  id: number;
-  slug: string;
-  title: string;
-  style: string | null;
-  notes: string | null;
-  black_and_white: number | 0 | 1;
-  created_at: string;
-  url: string | null;
-  gallery: string | null;
-};
-
-function json(data: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(data), {
-    headers: { 'content-type': 'application/json' },
-    ...init,
-  });
-}
-
-export default async function handler(request: NextRequest, env: Env) {
-  if (request.method !== 'GET') {
-    return new Response('Method Not Allowed', { status: 405 });
-  }
-
-  // Access bindings from env parameter
-  if (!env?.JIMI_DB) {
-    console.error('JIMI_DB binding not found');
-    return json({ error: 'Database not configured' }, { status: 500 });
-  }
-
-  const { searchParams } = new URL(request.url);
-  const gallery = searchParams.get('gallery') ?? undefined;
-
+export const onRequestGet: PagesFunction<{ DB: D1Database }> = async ({ env }) => {
   try {
-    let stmt;
-    if (gallery) {
-      stmt = env.JIMI_DB.prepare(`
-        SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery
-        FROM gallery_sketches
-        WHERE gallery = ?
-        ORDER BY created_at DESC
-      `).bind(gallery);
-    } else {
-      stmt = env.JIMI_DB.prepare(`
-        SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery
-        FROM gallery_sketches
-        ORDER BY created_at DESC
-      `);
-    }
-    
-    const { results } = await stmt.all<Row>();
-    return json(results);
+    // Define the shape of your gallery row
+    type GalleryRow = {
+      id: string;
+      slug: string;
+      title: string;
+      description: string;
+      created_at: number;
+    };
+
+    const stmt = env.DB.prepare(
+      "SELECT id, slug, title, description, created_at FROM galleries ORDER BY created_at DESC"
+    );
+
+    // No generics here — cast the result after
+    const { results } = await stmt.all();
+    return Response.json(results as GalleryRow[]);
   } catch (err: any) {
-    console.error('Database query error:', err);
-    return json({ error: err?.message ?? 'Server error' }, { status: 500 });
+    console.error("Database query error (gallery GET):", err);
+    return new Response(
+      JSON.stringify({ error: "Failed to fetch galleries", details: String(err) }),
+      { status: 500, headers: { "content-type": "application/json" } }
+    );
   }
-}
+};
+
+export const onRequestPost: PagesFunction<{ DB: D1Database }> = async ({ request, env }) => {
+  try {
+    const body = await request.json<{ slug: string; title: string; description?: string }>();
+    const { slug, title, description = "" } = body;
+
+    if (!slug || !title) {
+      return new Response(
+        JSON.stringify({ error: "Missing slug or title" }),
+        { status: 400, headers: { "content-type": "application/json" } }
+      );
+    }
+
+    const id = crypto.randomUUID();
+
+    await env.DB.prepare(
+      "INSERT INTO galleries (id, slug, title, description) VALUES (?, ?, ?, ?)"
+    )
+      .bind(id, slug, title, description)
+      .run();
+
+    return Response.json({ id, slug, title, description });
+  } catch (err: any) {
+    console.error("Database insert error (gallery POST):", err);
+    return new Response(
+      JSON.stringify({ error: "Failed to create gallery", details: String(err) }),
+      { status: 500, headers: { "content-type": "application/json" } }
+    );
+  }
+};
+
