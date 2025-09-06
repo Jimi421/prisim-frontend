@@ -1,54 +1,67 @@
-// Edge API Route: GET /api/images?gallery=<slug>
-export const config = { runtime: 'edge' as const };
+// pages/api/images.ts
+import type { NextApiRequest, NextApiResponse } from "next";
 
-type Row = {
-  id: number;
-  url: string;
+type ItemRow = {
+  id: string;
+  gallery_id: string;
+  key: string;         // R2 object key
+  mime: string;
   title: string;
-  gallery: string;
+  tags: string;        // JSON array string
+  favorite: number;    // 0/1
+  created_at: number;  // unix seconds
 };
 
-function json(data: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(data), {
-    headers: { 'content-type': 'application/json' },
-    ...init,
-  });
-}
+type GalleryRow = { id: string };
 
-export default async function handler(req: Request) {
-  if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
-
-  // @ts-expect-error provided by next-on-pages
-  const { JIMI_DB } = (globalThis as any).env ?? {};
-  if (!JIMI_DB?.prepare) return json({ error: 'Database not configured' }, { status: 500 });
-
-  const url = new URL(req.url);
-  const gallery = url.searchParams.get('gallery') ?? undefined;
-
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    let stmt;
-    if (gallery) {
-      stmt = JIMI_DB.prepare(`
-        SELECT i.id, i.url, COALESCE(i.title, '') AS title, g.slug AS gallery
-        FROM images i
-        JOIN gallery_images gi ON gi.image_id = i.id
-        JOIN galleries g ON g.id = gi.gallery_id
-        WHERE g.slug = ?
-        ORDER BY gi.position, i.created_at DESC
-      `).bind(gallery);
-    } else {
-      stmt = JIMI_DB.prepare(`
-        SELECT i.id, i.url, COALESCE(i.title, '') AS title, g.slug AS gallery
-        FROM images i
-        JOIN gallery_images gi ON gi.image_id = i.id
-        JOIN galleries g ON g.id = gi.gallery_id
-        ORDER BY g.name, gi.position, i.created_at DESC
-      `);
+    if (req.method !== "GET") {
+      res.status(405).end("Method Not Allowed");
+      return;
     }
-    const { results } = await stmt.all<Row>();
-    return json(results);
+
+    // Cloudflare Pages (next-on-pages) exposes bindings on globalThis.env
+    // We also fall back to global env names if you used JIMI_DB earlier.
+    const env: any = (globalThis as any)?.env ?? {};
+    const DB = env.DB ?? env.JIMI_DB;   // support either binding name
+
+    if (!DB?.prepare) {
+      res.status(500).json({ error: "Database not configured (DB binding missing)" });
+      return;
+    }
+
+    // Optional filter: ?slug=my-gallery
+    const slug = req.query.slug ? String(req.query.slug) : undefined;
+
+    let galleryId: string | undefined;
+    if (slug) {
+      const g = (await DB.prepare("SELECT id FROM galleries WHERE slug = ?")
+        .bind(slug)
+        .first()) as GalleryRow | null;
+
+      if (!g?.id) {
+        res.status(404).json({ error: "Gallery not found" });
+        return;
+      }
+      galleryId = g.id;
+    }
+
+    const stmt = galleryId
+      ? DB.prepare(
+          "SELECT id, gallery_id, key, mime, title, tags, favorite, created_at \
+           FROM items WHERE gallery_id = ? ORDER BY created_at DESC"
+        ).bind(galleryId)
+      : DB.prepare(
+          "SELECT id, gallery_id, key, mime, title, tags, favorite, created_at \
+           FROM items ORDER BY created_at DESC"
+        );
+
+    const { results } = await stmt.all();
+    res.status(200).json(results as ItemRow[]);
   } catch (err: any) {
-    return json({ error: err?.message ?? 'Server error' }, { status: 500 });
+    console.error("images API error:", err);
+    res.status(500).json({ error: String(err?.message || err) });
   }
 }
 
