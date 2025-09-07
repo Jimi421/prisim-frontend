@@ -4,13 +4,12 @@ compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
-binding             = "DB"
-database_name       = "prisim-frontend"
-database_id         = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"   # replace if you created a new D1
-preview_database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"   # ok to reuse same ID
+binding = "DB"
+database_name = "prisim-frontend"          # exact name as shown in D1 UI
+preview_database_name = "prisim-frontend"  # same or a separate preview DB
 
 [[r2_buckets]]
-binding            = "PRISIM_R2"
-bucket_name        = "prisim"
+binding = "PRISIM_R2"
+bucket_name = "prisim"
 preview_bucket_name = "prisim"
 
