@@ -3,13 +3,17 @@ pages_build_output_dir = ".vercel/output/static"
 compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat"]
 
+# (Optional but helpful) pin the account to avoid “wrong account” resolution
+# account_id = "YOUR_ACCOUNT_ID"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "prisim-frontend"
 database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"
+preview_database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"  # or a separate preview DB id
 
 [[r2_buckets]]
-binding = "PRISIM_R2"      # <— custom, non-reserved
+binding = "PRISIM_R2"
 bucket_name = "prisim"
 preview_bucket_name = "prisim"
 
