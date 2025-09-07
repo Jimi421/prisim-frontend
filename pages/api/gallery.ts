@@ -7,6 +7,7 @@ type GalleryRow = {
   slug: string;
   title: string;
   description: string;
+  cover_key: string | null;
   created_at: number;
 };
 type CreateGalleryBody = {
@@ -30,7 +31,7 @@ export default async function handler(req: Request): Promise<Response> {
 
     if (req.method === "GET") {
       const { results } = await DB.prepare(
-        "SELECT id, slug, title, description, created_at FROM galleries ORDER BY created_at DESC"
+        "SELECT id, slug, title, description, cover_key, created_at FROM galleries ORDER BY created_at DESC"
       ).all();
       return json(results as GalleryRow[]);
     }
