@@ -5,8 +5,8 @@ compatibility_flags = ["nodejs_compat"]
 
 [[d1_databases]]
 binding = "DB"
-database_name = "prisim-frontend"          # exact name as shown in D1 UI
-preview_database_name = "prisim-frontend"  # same or a separate preview DB
+database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"
+preview_database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"
 
 [[r2_buckets]]
 binding = "PRISIM_R2"
