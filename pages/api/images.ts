@@ -1,5 +1,5 @@
 // pages/api/images.ts
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 type Env = {
   // change only if your binding name is different in wrangler/pages settings

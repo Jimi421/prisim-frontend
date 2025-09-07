@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 type ImageRow = {
   id: string;

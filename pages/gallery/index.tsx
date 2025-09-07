@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-export const runtime = 'edge';
+export const runtime = 'experimental-edge';
 
 type Gallery = {
   id?: string;
