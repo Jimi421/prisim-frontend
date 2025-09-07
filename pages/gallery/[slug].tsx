@@ -11,42 +11,6 @@ type ImageRow = {
   height?: number | null;
 };
 
-type GalleryPayload = {
-  title?: string | null;
-  images?: ImageRow[];
-};
-
-function coercePayload(x: unknown): GalleryPayload {
-  const out: GalleryPayload = {};
-  if (!x || typeof x !== 'object') return out;
-  const obj = x as Record<string, unknown>;
-  out.title = typeof obj.title === 'string' ? obj.title : null;
-
-  const imgs = obj.images;
-  if (Array.isArray(imgs)) {
-    out.images = imgs
-      .map((r) => {
-        if (!r || typeof r !== 'object') return null;
-        const o = r as Record<string, unknown>;
-        const id = typeof o.id === 'string' ? o.id : crypto.randomUUID();
-        const key = typeof o.key === 'string' ? o.key : '';
-        if (!key) return null;
-        return {
-          id,
-          key,
-          alt: typeof o.alt === 'string' ? o.alt : null,
-          width: typeof o.width === 'number' ? o.width : null,
-          height: typeof o.height === 'number' ? o.height : null,
-        } as ImageRow;
-      })
-      .filter(Boolean) as ImageRow[];
-  } else {
-    out.images = [];
-  }
-
-  return out;
-}
-
 export default function GalleryDetail() {
   const router = useRouter();
   const { slug } = router.query as { slug?: string };
@@ -60,12 +24,28 @@ export default function GalleryDetail() {
 
     (async () => {
       try {
-        const res = await fetch(`/api/images?gallery=${encodeURIComponent(slug)}`);
+        const res = await fetch(`/api/sketches?slug=${encodeURIComponent(slug)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = coercePayload(await res.json());
-
-        setTitle(data.title ?? String(slug));
-        setImages(data.images ?? []);
+        const raw = await res.json();
+        const imgs = Array.isArray(raw)
+          ? raw
+              .map((r: any) => {
+                if (!r || typeof r !== 'object') return null;
+                const id = typeof r.id === 'string' ? r.id : crypto.randomUUID();
+                const key = typeof r.key === 'string' ? r.key : '';
+                if (!key) return null;
+                return {
+                  id,
+                  key,
+                  alt: typeof r.title === 'string' ? r.title : null,
+                  width: typeof r.width === 'number' ? r.width : null,
+                  height: typeof r.height === 'number' ? r.height : null,
+                } as ImageRow;
+              })
+              .filter(Boolean)
+          : [];
+        setTitle(String(slug));
+        setImages(imgs as ImageRow[]);
       } catch (e: any) {
         setErr(e?.message ?? 'Failed to load');
       }
