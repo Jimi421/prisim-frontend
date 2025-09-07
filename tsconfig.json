@@ -21,6 +21,9 @@
     "**/*.ts",
     "**/*.tsx"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "open-next.config.ts",
+    ".open-next/**"
+  ]
 }
 
