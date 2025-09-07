@@ -26,7 +26,7 @@ function coerceGalleries(x: unknown): Gallery[] {
         description:
           typeof obj.description === 'string' ? obj.description : null,
         coverKey:
-          typeof obj.coverKey === 'string' ? obj.coverKey : null,
+          typeof obj.cover_key === 'string' ? obj.cover_key : null,
       } as Gallery;
     })
     .filter(Boolean) as Gallery[];
