@@ -1,62 +1,52 @@
 // pages/api/gallery.ts
+// Next.js (pages router) API route running on the Edge, using Cloudflare D1 typings.
+
 export const config = { runtime: 'edge' };
 
-type Row = {
+type GalleryRow = {
   id: number;
   slug: string;
   title: string;
-  style: string | null;
-  notes: string | null;
-  black_and_white: number;
-  created_at: string;
-  url: string | null;
-  gallery: string | null;
-  file_key: string | null;
+  cover_url?: string | null;
 };
 
-function json(data: unknown, init: ResponseInit = {}) {
+type Env = {
+  JIMI_DB: D1Database;
+};
+
+export default async function handler(req: Request): Promise<Response> {
+  try {
+    // In next-on-pages, env is available on req.cf.env
+    const env = (req as any).cf?.env as Env | undefined;
+    if (!env?.JIMI_DB) {
+      return json({ error: 'D1 binding JIMI_DB not available' }, 500);
+    }
+
+    const db = env.JIMI_DB;
+
+    // Adjust the query/columns to match your schema
+    const query = `
+      SELECT id, slug, title, cover_url
+      FROM galleries
+      ORDER BY id DESC
+    `;
+
+    const stmt = db.prepare(query);
+    // Make sure TypeScript knows this is a D1PreparedStatement so generics are allowed:
+    const { results } = await (stmt as D1PreparedStatement).all<GalleryRow>();
+
+    return json({ galleries: results ?? [] });
+  } catch (err: any) {
+    // Surface a helpful error in JSON without leaking internals.
+    return json({ error: err?.message || 'Failed to load galleries' }, 500);
+  }
+}
+
+// Small helper for JSON responses
+function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
-    headers: { 'content-type': 'application/json' },
-    ...init,
+    status,
+    headers: { 'content-type': 'application/json; charset=utf-8' }
   });
 }
 
-export default async function handler(req: Request) {
-  if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
-
-  try {
-    // Access the environment bindings
-    const env: any = (globalThis as any)?.env ?? {};
-    const DB = env.JIMI_DB;
-    
-    if (!DB?.prepare) {
-      console.error('Database binding not found. Available env keys:', Object.keys(env));
-      return json({ error: 'Database not configured' }, { status: 500 });
-    }
-
-    const url = new URL(req.url);
-    const gallery = url.searchParams.get('gallery') ?? undefined;
-
-    let stmt;
-    if (gallery) {
-      stmt = DB.prepare(`
-        SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery, file_key
-        FROM gallery_sketches
-        WHERE gallery = ?
-        ORDER BY created_at DESC
-      `).bind(gallery);
-    } else {
-      stmt = DB.prepare(`
-        SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery, file_key
-        FROM gallery_sketches
-        ORDER BY created_at DESC
-      `);
-    }
-    
-    const { results } = await stmt.all<Row>();
-    return json(results);
-  } catch (err: any) {
-    console.error('Database query error:', err);
-    return json({ error: err?.message ?? 'Server error' }, { status: 500 });
-  }
-}
