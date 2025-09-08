@@ -1,54 +1,84 @@
-export const config = { runtime: "edge" };
+// pages/gallery/[slug].tsx
+import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
 
-type Env = {
-  JIMI_DB: D1Database;
-  PRISIM_BUCKET: R2Bucket;
-};
-
-// Small helper to send JSON responses from Edge API routes
-function json(body: unknown, init: number | ResponseInit = 200) {
-  const initObj = typeof init === "number" ? { status: init } : init;
-  return new Response(JSON.stringify(body), {
-    ...initObj,
-    headers: { "content-type": "application/json; charset=utf-8", ...(initObj as any)?.headers },
-  });
+interface Image {
+  id: string;
+  url: string;
+  title?: string;
 }
 
-export default async function handler(req: Request, ctx: any) {
-  const env: Env = (ctx as any).env ?? (globalThis as any).env; // for Next-on-Pages / Cloudflare Pages
-  const url = new URL(req.url);
-  const slug = url.pathname.split("/").pop() || "";
+interface GalleryApiResponse {
+  title?: string;
+  images?: Image[];
+  error?: string;
+}
 
-  if (!slug) return json({ error: "Missing slug" }, 400);
+export default function GallerySlug() {
+  const router = useRouter();
+  const { slug } = router.query;
 
-  try {
-    // 1) Fetch gallery meta
-    const galleryStmt = env.JIMI_DB.prepare(
-      `SELECT id, title FROM galleries WHERE slug = ? LIMIT 1`
-    ).bind(slug);
+  const [title, setTitle] = useState<string>("");
+  const [images, setImages] = useState<Image[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-    const galleryRes = await galleryStmt.all(); // no generic; D1Result<any>
-    const gallery = (galleryRes.results as any[])[0];
+  useEffect(() => {
+    // Wait until the router provides a real slug
+    if (!slug) return;
 
-    if (!gallery) return json({ title: slug, images: [] }); // not found, safe empty
+    // Make sure we have a plain string
+    const slugStr = Array.isArray(slug) ? slug[0] : slug;
 
-    // 2) Fetch images for that gallery
-    const imagesStmt = env.JIMI_DB.prepare(
-      `SELECT id, key, url, caption
-       FROM images
-       WHERE gallery_id = ?
-       ORDER BY created_at DESC`
-    ).bind(gallery.id);
+    const run = async () => {
+      try {
+        const res = await fetch(`/api/gallery?slug=${encodeURIComponent(slugStr)}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-    const imagesRes = await imagesStmt.all();
-    const images = (imagesRes.results as any[]) ?? [];
+        const data: GalleryApiResponse = await res.json();
+        if (data.error) throw new Error(data.error);
 
-    // If you store only the R2 object key, you can derive a URL here if needed.
-    // For now, pass through whatever columns exist (key/url/caption).
-    return json({ title: gallery.title ?? slug, images });
-  } catch (err: any) {
-    console.error("DB error (gallery slug):", err);
-    return json({ error: "Database error" }, 500);
+        setTitle(data.title ?? slugStr);
+        setImages(data.images ?? []);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Failed to load gallery";
+        setError(msg);
+      }
+    };
+
+    void run();
+  }, [slug]);
+
+  if (error) {
+    return (
+      <div className="p-6 text-red-500">
+        <h1 className="text-xl font-bold mb-2">Error</h1>
+        <p>{error}</p>
+      </div>
+    );
   }
+
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-4">{title}</h1>
+      {images.length === 0 ? (
+        <p className="text-gray-500">No images found for this gallery.</p>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {images.map((img) => (
+            <div key={img.id} className="border rounded-lg overflow-hidden">
+              <img
+                src={img.url}
+                alt={img.title || "Untitled"}
+                className="w-full h-48 object-cover"
+              />
+              {img.title && (
+                <p className="text-center p-2 text-sm">{img.title}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
