@@ -35,7 +35,7 @@ export default async function handler(req: Request): Promise<Response> {
     // Make sure TypeScript knows this is a D1PreparedStatement so generics are allowed:
     const { results } = await (stmt as D1PreparedStatement).all<GalleryRow>();
 
-    return json({ galleries: results ?? [] });
+    return json(results ?? []);
   } catch (err: any) {
     // Surface a helpful error in JSON without leaking internals.
     return json({ error: err?.message || 'Failed to load galleries' }, 500);
