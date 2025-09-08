@@ -17,7 +17,7 @@ export default async function handler(_req: Request, ctx: any) {
 
   try {
     const stmt = env.JIMI_DB.prepare(
-      `SELECT id, title, prompt, image_url, created_at
+      `SELECT id, slug, title, style, black_and_white, notes, url, gallery, created_at
        FROM sketches
        ORDER BY created_at DESC`
     );
