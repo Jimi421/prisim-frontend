@@ -46,7 +46,7 @@ MIT
 Run migrations before starting the app to ensure the database schema matches the latest API routes.
 
 ```bash
-wrangler d1 migrations apply JIMI_DB
+wrangler d1 migrations apply DB
 ```
 
 This will apply `migrations/003_add_file_key_column.sql` and any earlier scripts, adding the `gallery` and `file_key` columns required by the upload and gallery APIs.
