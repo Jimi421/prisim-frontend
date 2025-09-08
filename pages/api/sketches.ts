@@ -1,47 +1,34 @@
-// pages/api/sketches.ts
-export const config = { runtime: 'edge' };
+export const config = { runtime: "edge" };
 
-type Row = {
-  id: number;
-  slug: string;
-  title: string;
-  style: string | null;
-  black_and_white: number;
-  notes: string | null;
-  url: string | null;
-  created_at: string;
-  gallery: string | null;
+type Env = {
+  JIMI_DB: D1Database;
 };
 
-function json(data: unknown, init: ResponseInit = {}) {
-  return new Response(JSON.stringify(data), {
-    headers: { 'content-type': 'application/json' },
-    ...init,
+function json(body: unknown, init: number | ResponseInit = 200) {
+  const initObj = typeof init === "number" ? { status: init } : init;
+  return new Response(JSON.stringify(body), {
+    ...initObj,
+    headers: { "content-type": "application/json; charset=utf-8", ...(initObj as any)?.headers },
   });
 }
 
-export default async function handler(req: Request) {
-  if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+export default async function handler(_req: Request, ctx: any) {
+  const env: Env = (ctx as any).env ?? (globalThis as any).env;
 
   try {
-    const env: any = (globalThis as any)?.env ?? {};
-    const DB = env.JIMI_DB;
-    
-    if (!DB?.prepare) {
-      console.error('Database binding not found. Available env keys:', Object.keys(env));
-      return json({ ok: false, error: 'Database not configured' }, { status: 500 });
-    }
+    const stmt = env.JIMI_DB.prepare(
+      `SELECT id, title, prompt, image_url, created_at
+       FROM sketches
+       ORDER BY created_at DESC`
+    );
 
-    const stmt = DB.prepare(`
-      SELECT id, slug, title, style, black_and_white, notes, url, created_at, gallery
-      FROM gallery_sketches
-      ORDER BY created_at DESC
-    `);
-    
-    const { results } = await stmt.all<Row>();
+    const res = await stmt.all(); // no generic
+    const results = (res.results as any[]) ?? [];
+
     return json({ ok: true, sketches: results });
   } catch (err: any) {
-    console.error('Database query error:', err);
-    return json({ ok: false, error: err?.message ?? 'Server error' }, { status: 500 });
+    console.error("Database query error (sketches):", err);
+    return json({ ok: false, error: "Database error" }, 500);
   }
 }
+

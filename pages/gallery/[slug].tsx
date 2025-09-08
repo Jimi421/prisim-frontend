@@ -1,80 +1,54 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+export const config = { runtime: "edge" };
 
-export const runtime = 'experimental-edge';
-
-type ImageRow = {
-  id: string;
-  key: string; // R2 key like "portraits/jane.jpg"
-  alt?: string | null;
-  width?: number | null;
-  height?: number | null;
+type Env = {
+  JIMI_DB: D1Database;
+  PRISIM_BUCKET: R2Bucket;
 };
 
-export default function GalleryDetail() {
-  const router = useRouter();
-  const { slug } = router.query as { slug?: string };
+// Small helper to send JSON responses from Edge API routes
+function json(body: unknown, init: number | ResponseInit = 200) {
+  const initObj = typeof init === "number" ? { status: init } : init;
+  return new Response(JSON.stringify(body), {
+    ...initObj,
+    headers: { "content-type": "application/json; charset=utf-8", ...(initObj as any)?.headers },
+  });
+}
 
-  const [title, setTitle] = useState<string>('');
-  const [images, setImages] = useState<ImageRow[]>([]);
-  const [err, setErr] = useState<string | null>(null);
+export default async function handler(req: Request, ctx: any) {
+  const env: Env = (ctx as any).env ?? (globalThis as any).env; // for Next-on-Pages / Cloudflare Pages
+  const url = new URL(req.url);
+  const slug = url.pathname.split("/").pop() || "";
 
-  useEffect(() => {
-    if (!slug) return;
+  if (!slug) return json({ error: "Missing slug" }, 400);
 
-    (async () => {
-      try {
-        const res = await fetch(`/api/sketches?slug=${encodeURIComponent(slug)}`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const raw = await res.json();
-        const imgs = Array.isArray(raw)
-          ? raw
-              .map((r: any) => {
-                if (!r || typeof r !== 'object') return null;
-                const id = typeof r.id === 'string' ? r.id : crypto.randomUUID();
-                const key = typeof r.key === 'string' ? r.key : '';
-                if (!key) return null;
-                return {
-                  id,
-                  key,
-                  alt: typeof r.title === 'string' ? r.title : null,
-                  width: typeof r.width === 'number' ? r.width : null,
-                  height: typeof r.height === 'number' ? r.height : null,
-                } as ImageRow;
-              })
-              .filter(Boolean)
-          : [];
-        setTitle(String(slug));
-        setImages(imgs as ImageRow[]);
-      } catch (e: any) {
-        setErr(e?.message ?? 'Failed to load');
-      }
-    })();
-  }, [slug]);
+  try {
+    // 1) Fetch gallery meta
+    const galleryStmt = env.JIMI_DB.prepare(
+      `SELECT id, title FROM galleries WHERE slug = ? LIMIT 1`
+    ).bind(slug);
 
-  return (
-    <main className="min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto px-6 py-10">
-        <h1 className="text-3xl font-bold mb-6">{title || 'Gallery'}</h1>
-        {err && <p className="text-red-600 mb-4">Error: {err}</p>}
+    const galleryRes = await galleryStmt.all(); // no generic; D1Result<any>
+    const gallery = (galleryRes.results as any[])[0];
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {images.map((img) => {
-            const src = `/api/images?key=${encodeURIComponent(img.key)}`;
-            return (
-              <div key={img.id} className="rounded-xl overflow-hidden bg-neutral-50">
-                <img
-                  src={src}
-                  alt={img.alt ?? ''}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </main>
-  );
+    if (!gallery) return json({ title: slug, images: [] }); // not found, safe empty
+
+    // 2) Fetch images for that gallery
+    const imagesStmt = env.JIMI_DB.prepare(
+      `SELECT id, key, url, caption
+       FROM images
+       WHERE gallery_id = ?
+       ORDER BY created_at DESC`
+    ).bind(gallery.id);
+
+    const imagesRes = await imagesStmt.all();
+    const images = (imagesRes.results as any[]) ?? [];
+
+    // If you store only the R2 object key, you can derive a URL here if needed.
+    // For now, pass through whatever columns exist (key/url/caption).
+    return json({ title: gallery.title ?? slug, images });
+  } catch (err: any) {
+    console.error("DB error (gallery slug):", err);
+    return json({ error: "Database error" }, 500);
+  }
 }
 

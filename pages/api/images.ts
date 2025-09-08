@@ -1,38 +1,37 @@
-// pages/api/images.ts
-export const runtime = 'experimental-edge';
+export const config = { runtime: "edge" };
 
 type Env = {
-  // change only if your binding name is different in wrangler/pages settings
-  PRISIM_R2: R2Bucket;
+  JIMI_DB: D1Database;
 };
 
-export default async function handler(req: Request, env: Env) {
+function json(body: unknown, init: number | ResponseInit = 200) {
+  const initObj = typeof init === "number" ? { status: init } : init;
+  return new Response(JSON.stringify(body), {
+    ...initObj,
+    headers: { "content-type": "application/json; charset=utf-8", ...(initObj as any)?.headers },
+  });
+}
+
+export default async function handler(req: Request, ctx: any) {
+  const env: Env = (ctx as any).env ?? (globalThis as any).env;
+  const { searchParams } = new URL(req.url);
+  const limit = Math.min(Number(searchParams.get("limit") || 50), 200);
+
   try {
-    const url = new URL(req.url);
-    const key = url.searchParams.get('key');
-    if (!key) return new Response('Missing "key"', { status: 400 });
+    const stmt = env.JIMI_DB.prepare(
+      `SELECT id, gallery_id, key, url, caption, created_at
+       FROM images
+       ORDER BY created_at DESC
+       LIMIT ?`
+    ).bind(limit);
 
-    const obj = await env.PRISIM_R2.get(key);
-    if (!obj) return new Response('Not found', { status: 404 });
+    const res = await stmt.all();
+    const results = (res.results as any[]) ?? [];
 
-    const headers = new Headers();
-
-    // Respect any stored metadata
-    const ct =
-      obj.httpMetadata?.contentType ||
-      obj.customMetadata?.contentType ||
-      'application/octet-stream';
-    headers.set('Content-Type', ct);
-    if (obj.httpMetadata?.cacheControl) {
-      headers.set('Cache-Control', obj.httpMetadata.cacheControl);
-    } else {
-      headers.set('Cache-Control', 'public, max-age=3600, s-maxage=86400, immutable');
-    }
-
-    // Stream body to client
-    return new Response(obj.body, { headers, status: 200 });
-  } catch (err) {
-    return new Response('Internal Error', { status: 500 });
+    return json({ ok: true, images: results });
+  } catch (err: any) {
+    console.error("Database query error (images):", err);
+    return json({ ok: false, error: "Database error" }, 500);
   }
 }
 

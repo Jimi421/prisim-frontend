@@ -1,4 +1,3 @@
-// tsconfig.json
 {
   "compilerOptions": {
     "target": "es2022",
@@ -22,6 +21,9 @@
     "**/*.ts",
     "**/*.tsx"
   ],
-  "exclude": ["open-next.config.ts", ".open-next/**"]
+  "exclude": [
+    "open-next.config.ts",
+    ".open-next/**"
+  ]
 }
 
