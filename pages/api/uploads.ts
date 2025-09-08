@@ -1,3 +1,5 @@
+import { getEnv } from "../../lib/getEnv";
+
 export const config = { runtime: "edge" };
 
 type Env = {
@@ -21,7 +23,10 @@ function slugify(input: string) {
 }
 
 export default async function handler(req: Request, ctx: any) {
-  const env: Env = (ctx as any).env ?? (globalThis as any).env;
+  const env = getEnv<Env>(req, ctx);
+  if (!env?.PRISIM_BUCKET || !env?.JIMI_DB) {
+    return json({ error: "R2 binding PRISIM_BUCKET or D1 binding JIMI_DB not available" }, 500);
+  }
 
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
