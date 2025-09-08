@@ -3,7 +3,7 @@ pages_build_output_dir = ".vercel/output/static"
 compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat"]
 
-# --- D1 Database ---
+# --- DB binding ---
 [[d1_databases]]
 binding = "DB"  
 database_name = "prisim-frontend"  

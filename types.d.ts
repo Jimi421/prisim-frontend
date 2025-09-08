@@ -5,7 +5,7 @@ import { R2Bucket, D1Database } from '@cloudflare/workers-types';
 
 declare global {
   interface CloudflareEnv {
-    /** Your D1 binding name */
+    /** Your DB binding name */
     DB: D1Database;
     /** Your R2 binding name */
     PRISIM_BUCKET: R2Bucket;
