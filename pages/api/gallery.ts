@@ -1,63 +1,62 @@
+// pages/api/gallery.ts
 export const config = { runtime: 'edge' };
 
-// GET: list galleries
-// POST JSON: { slug, title, description? } -> create gallery
-type GalleryRow = {
-  id: string;
+type Row = {
+  id: number;
   slug: string;
   title: string;
-  description: string;
-  cover_key: string | null;
-  created_at: number;
-};
-type CreateGalleryBody = {
-  slug?: string;
-  title?: string;
-  description?: string;
+  style: string | null;
+  notes: string | null;
+  black_and_white: number;
+  created_at: string;
+  url: string | null;
+  gallery: string | null;
+  file_key: string | null;
 };
 
-function json(data: unknown, status = 200) {
+function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
-    status,
-    headers: { "content-type": "application/json" },
+    headers: { 'content-type': 'application/json' },
+    ...init,
   });
 }
 
-export default async function handler(req: Request): Promise<Response> {
+export default async function handler(req: Request) {
+  if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
+
   try {
+    // Access the environment bindings
     const env: any = (globalThis as any)?.env ?? {};
-    const DB = env.DB;
-    if (!DB?.prepare) return json({ error: "Database not configured" }, 500);
-
-    if (req.method === "GET") {
-      const { results } = await DB.prepare(
-        "SELECT id, slug, title, description, cover_key, created_at FROM galleries ORDER BY created_at DESC"
-      ).all();
-      return json(results as GalleryRow[]);
+    const DB = env.JIMI_DB;
+    
+    if (!DB?.prepare) {
+      console.error('Database binding not found. Available env keys:', Object.keys(env));
+      return json({ error: 'Database not configured' }, { status: 500 });
     }
 
-    if (req.method === "POST") {
-      const body = (await req.json().catch(() => ({}))) as Partial<CreateGalleryBody>;
-      const slug = body.slug ?? "";
-      const title = body.title ?? "";
-      const description = body.description ?? "";
+    const url = new URL(req.url);
+    const gallery = url.searchParams.get('gallery') ?? undefined;
 
-      if (!slug || !title) return json({ error: "Missing slug or title" }, 400);
-
-      const id = crypto.randomUUID();
-      await DB.prepare(
-        "INSERT INTO galleries (id, slug, title, description) VALUES (?, ?, ?, ?)"
-      )
-        .bind(id, slug, title, description)
-        .run();
-
-      return json({ id, slug, title, description }, 201);
+    let stmt;
+    if (gallery) {
+      stmt = DB.prepare(`
+        SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery, file_key
+        FROM gallery_sketches
+        WHERE gallery = ?
+        ORDER BY created_at DESC
+      `).bind(gallery);
+    } else {
+      stmt = DB.prepare(`
+        SELECT id, slug, title, style, notes, black_and_white, created_at, url, gallery, file_key
+        FROM gallery_sketches
+        ORDER BY created_at DESC
+      `);
     }
-
-    return new Response("Method Not Allowed", { status: 405 });
+    
+    const { results } = await stmt.all<Row>();
+    return json(results);
   } catch (err: any) {
-    console.error("gallery API error:", err);
-    return json({ error: String(err?.message || err) }, 500);
+    console.error('Database query error:', err);
+    return json({ error: err?.message ?? 'Server error' }, { status: 500 });
   }
 }
-

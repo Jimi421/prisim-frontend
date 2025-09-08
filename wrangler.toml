@@ -3,16 +3,11 @@ pages_build_output_dir = ".vercel/output/static"
 compatibility_date = "2025-07-01"
 compatibility_flags = ["nodejs_compat"]
 
-# --- DB binding ---
 [[d1_databases]]
-binding = "DB"  
-database_name = "prisim-frontend"  
-database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"  
-preview_database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"  
+binding = "JIMI_DB"
+database_name = "prisim-frontend"
+database_id = "1354e0eb-58e2-4041-94ba-9bbd5a06fba6"
 
-# --- R2 Bucket ---
 [[r2_buckets]]
-binding = "R2"  
-bucket_name = "prisim"  
-preview_bucket_name = "prisim"
-
+binding = "PRISIM_BUCKET"
+bucket_name = "prisim"
