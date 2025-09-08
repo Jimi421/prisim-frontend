@@ -24,7 +24,7 @@ export default async function handler(req: Request): Promise<Response> {
     if (req.method !== 'GET') return new Response('Method Not Allowed', { status: 405 });
 
     const env: any = (globalThis as any)?.env ?? {};
-    const DB = env.DB ?? env.JIMI_DB;
+    const DB = env.DB;
     const R2: R2Bucket | undefined =
       env.PRISIM_R2 ?? env.BUCKET ?? env.ASSETS ?? env.PRISIM_BUCKET;
 

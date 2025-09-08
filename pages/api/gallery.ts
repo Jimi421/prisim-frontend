@@ -26,7 +26,7 @@ function json(data: unknown, status = 200) {
 export default async function handler(req: Request): Promise<Response> {
   try {
     const env: any = (globalThis as any)?.env ?? {};
-    const DB = env.DB ?? env.JIMI_DB;
+    const DB = env.DB;
     if (!DB?.prepare) return json({ error: "Database not configured" }, 500);
 
     if (req.method === "GET") {
