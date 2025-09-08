@@ -49,6 +49,38 @@ CREATE TABLE IF NOT EXISTS asset_tags (
   PRIMARY KEY (asset_id, tag_id)
 );
 
+CREATE TABLE IF NOT EXISTS uploads (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  key          TEXT UNIQUE,
+  filename     TEXT,
+  content_type TEXT,
+  created_at   TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sketches (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug           TEXT UNIQUE,
+  title          TEXT,
+  style          TEXT,
+  black_and_white INTEGER,
+  notes          TEXT,
+  url            TEXT,
+  gallery        TEXT,
+  created_at     TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS images (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  gallery_id  INTEGER REFERENCES galleries(id),
+  key         TEXT UNIQUE,
+  url         TEXT,
+  caption     TEXT,
+  created_at  TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_sketches_gallery ON sketches(gallery);
+CREATE INDEX IF NOT EXISTS idx_images_gallery   ON images(gallery_id);
+
 -- ===== housekeeping =====
 CREATE TRIGGER IF NOT EXISTS trg_galleries_updated_at
 AFTER UPDATE ON galleries
