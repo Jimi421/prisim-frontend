@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react';
 export const runtime = 'experimental-edge';
 
 type Gallery = {
-  id?: string;
+  id?: number;
   slug: string;
   title?: string | null;
   description?: string | null;
-  coverKey?: string | null; // optional R2 key for a cover image
+  coverUrl?: string | null; // optional cover image URL
 };
 
 function coerceGalleries(x: unknown): Gallery[] {
@@ -20,13 +20,13 @@ function coerceGalleries(x: unknown): Gallery[] {
       const slug = typeof obj.slug === 'string' ? obj.slug : '';
       if (!slug) return null;
       return {
-        id: typeof obj.id === 'string' ? obj.id : undefined,
+        id: typeof obj.id === 'number' ? obj.id : undefined,
         slug,
         title: typeof obj.title === 'string' ? obj.title : null,
         description:
           typeof obj.description === 'string' ? obj.description : null,
-        coverKey:
-          typeof obj.cover_key === 'string' ? obj.cover_key : null,
+        coverUrl:
+          typeof obj.cover_url === 'string' ? obj.cover_url : null,
       } as Gallery;
     })
     .filter(Boolean) as Gallery[];
@@ -57,9 +57,7 @@ export default function GalleryIndex() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {galleries.map((g) => {
-            const coverSrc = g.coverKey
-              ? `/api/images?key=${encodeURIComponent(g.coverKey)}`
-              : undefined;
+            const coverSrc = g.coverUrl ?? undefined;
             return (
               <Link
                 key={g.slug}
