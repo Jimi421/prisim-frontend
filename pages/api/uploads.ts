@@ -24,9 +24,6 @@ function slugify(input: string) {
 
 export default async function handler(req: Request, ctx: any) {
   const env = getEnv<Env>(req, ctx);
-  if (!env?.PRISIM_BUCKET || !env?.JIMI_DB) {
-    return json({ error: "R2 binding PRISIM_BUCKET or D1 binding JIMI_DB not available" }, 500);
-  }
 
   if (req.method !== "POST") {
     return json({ error: "Method not allowed" }, 405);
@@ -51,6 +48,10 @@ export default async function handler(req: Request, ctx: any) {
 
       const key = keyFromForm || `${Date.now()}-${file.name}`;
       // Upload to R2
+      if (!env?.PRISIM_BUCKET) {
+        console.error("missing binding", "PRISIM_BUCKET");
+        return json({ error: "missing binding" }, 500);
+      }
       await env.PRISIM_BUCKET.put(key, await file.arrayBuffer(), {
         httpMetadata: { contentType: file.type || "application/octet-stream" },
       });
@@ -58,12 +59,22 @@ export default async function handler(req: Request, ctx: any) {
       const slug = `${slugify(title)}-${Date.now()}`;
       const url = `/api/files/${encodeURIComponent(key)}`;
 
+      if (!env?.JIMI_DB) {
+        console.error("missing binding", "JIMI_DB");
+        return json({ error: "missing binding" }, 500);
+      }
+
       const insertRes = await env.JIMI_DB.prepare(
         `INSERT INTO sketches (slug, title, style, black_and_white, notes, url, gallery)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
         .bind(slug, title, style, blackAndWhite, notes, url, gallery)
         .run();
+
+      if (!env?.JIMI_DB) {
+        console.error("missing binding", "JIMI_DB");
+        return json({ error: "missing binding" }, 500);
+      }
 
       const rowRes = await env.JIMI_DB.prepare(
         `SELECT id, slug, title, style, black_and_white, notes, url, gallery, created_at
@@ -80,6 +91,10 @@ export default async function handler(req: Request, ctx: any) {
     // Raw body upload (fallback)
     const key = new URL(req.url).searchParams.get("key") || `${Date.now()}.bin`;
     const buf = await req.arrayBuffer();
+    if (!env?.PRISIM_BUCKET) {
+      console.error("missing binding", "PRISIM_BUCKET");
+      return json({ error: "missing binding" }, 500);
+    }
     await env.PRISIM_BUCKET.put(key, buf);
 
     return json({ ok: true, key });

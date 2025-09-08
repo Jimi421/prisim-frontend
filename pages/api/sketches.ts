@@ -16,11 +16,13 @@ function json(body: unknown, init: number | ResponseInit = 200) {
 
 export default async function handler(req: Request, ctx: any) {
   const env = getEnv<Env>(req, ctx);
-  if (!env?.JIMI_DB) {
-    return json({ error: "D1 binding JIMI_DB not available" }, 500);
-  }
 
   try {
+    if (!env?.JIMI_DB) {
+      console.error("missing binding", "JIMI_DB");
+      return json({ error: "missing binding" }, 500);
+    }
+
     const stmt = env.JIMI_DB.prepare(
       `SELECT id, slug, title, style, black_and_white, notes, url, gallery, created_at
        FROM sketches
