@@ -13,6 +13,13 @@ function json(body: unknown, init: number | ResponseInit = 200) {
   });
 }
 
+function slugify(input: string) {
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export default async function handler(req: Request, ctx: any) {
   const env: Env = (ctx as any).env ?? (globalThis as any).env;
 
@@ -27,6 +34,11 @@ export default async function handler(req: Request, ctx: any) {
       const form = await req.formData();
       const file = form.get("file");
       const keyFromForm = form.get("key")?.toString();
+      const title = form.get("title")?.toString() || "";
+      const style = form.get("style")?.toString() || "";
+      const notes = form.get("notes")?.toString() || "";
+      const gallery = form.get("gallery")?.toString() || "";
+      const blackAndWhite = form.get("blackAndWhite") ? 1 : 0;
 
       if (!(file instanceof File)) {
         return json({ error: "Missing file" }, 400);
@@ -38,15 +50,26 @@ export default async function handler(req: Request, ctx: any) {
         httpMetadata: { contentType: file.type || "application/octet-stream" },
       });
 
-      // Optional: record in D1 (adjust columns to your schema)
-      await env.JIMI_DB.prepare(
-        `INSERT INTO uploads (key, filename, content_type, created_at)
-         VALUES (?, ?, ?, datetime('now'))`
+      const slug = `${slugify(title)}-${Date.now()}`;
+      const url = `/api/files/${encodeURIComponent(key)}`;
+
+      const insertRes = await env.JIMI_DB.prepare(
+        `INSERT INTO sketches (slug, title, style, black_and_white, notes, url, gallery)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
-        .bind(key, file.name, file.type || "application/octet-stream")
+        .bind(slug, title, style, blackAndWhite, notes, url, gallery)
         .run();
 
-      return json({ ok: true, key });
+      const rowRes = await env.JIMI_DB.prepare(
+        `SELECT id, slug, title, style, black_and_white, notes, url, gallery, created_at
+         FROM sketches WHERE id = ?`
+      )
+        .bind(insertRes.meta.last_row_id)
+        .all();
+
+      const sketch = (rowRes.results as any[])[0];
+
+      return json({ ok: true, sketch });
     }
 
     // Raw body upload (fallback)
