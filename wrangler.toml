@@ -1,21 +1,18 @@
-# wrangler.toml (for Cloudflare Pages deploys)
-
+# wrangler.toml
 name = "prisim-frontend"
 pages_build_output_dir = ".vercel/output/static"
 compatibility_date = "2024-06-20"
+compatibility_flags = ["nodejs_compat"]   # <— add this
 
-# --- D1 binding ---
 [[d1_databases]]
-binding = "JIMI_DB"                      # MUST match your code: env.JIMI_DB
-database_name = "jimi_db"                # exactly as shown by `wrangler d1 list`
-database_id = "7ed1508b-2e2c-4b16-acb5-c0d9f9436a27"  # optional but recommended
+binding = "JIMI_DB"
+database_name = "jimi_db"
+database_id = "7ed1508b-2e2c-4b16-acb5-c0d9f9436a27"
 
-# --- R2 binding ---
 [[r2_buckets]]
-binding = "PRISIM_BUCKET"                # MUST match your code
+binding = "PRISIM_BUCKET"
 bucket_name = "prisim"
 
-# (optional)
 [observability]
 enabled = true
 
