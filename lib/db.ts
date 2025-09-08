@@ -1,5 +1,5 @@
 // prisim-frontend/lib/db.ts
-// Utility for Next.js API routes to access the D1 binding
+// Utility for Next.js API routes to access the DB binding
 
 import { D1Database } from '@cloudflare/workers-types';
 

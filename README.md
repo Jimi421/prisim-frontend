@@ -8,7 +8,7 @@ The frontend interface for **Prisim**, a modern web-based media gallery. Built w
 - File upload preview
 - Sub-gallery navigation
 - Tailwind CSS styling
-- Integration-ready with Cloudflare Workers and D1
+- Integration-ready with Cloudflare Workers and a database binding (`DB`)
 
 ## Getting Started
 
