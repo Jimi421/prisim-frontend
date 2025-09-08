@@ -3,7 +3,7 @@
 
 import { D1Database } from '@cloudflare/workers-types';
 
-export function getDb(env: { DB: D1Database }) {
-  return env.DB;
+export function getDb(env: { JIMI_DB: D1Database }) {
+  return env.JIMI_DB;
 }
 
