@@ -50,3 +50,11 @@ wrangler d1 migrations apply DB
 ```
 
 This will apply `migrations/003_add_file_key_column.sql` and any earlier scripts, adding the `gallery` and `file_key` columns required by the upload and gallery APIs.
+
+## API Routes
+
+- `/api/gallery` – list galleries and related media
+- `/api/sketches` – fetch sketches
+- `/api/uploads` – upload new sketches
+- `/api/files/[key]` – serve files from R2
+- `/api/images` – **removed**. Images are now stored in the `assets` table and surfaced via the gallery APIs.
