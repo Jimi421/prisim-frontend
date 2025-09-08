@@ -1,6 +1,8 @@
 // pages/api/gallery.ts
 // Next.js (pages router) API route running on the Edge, using Cloudflare D1 typings.
 
+import { getEnv } from '../../lib/getEnv';
+
 export const config = { runtime: 'edge' };
 
 type GalleryRow = {
@@ -14,10 +16,9 @@ type Env = {
   JIMI_DB: D1Database;
 };
 
-export default async function handler(req: Request): Promise<Response> {
+export default async function handler(req: Request, ctx: any): Promise<Response> {
   try {
-    // In next-on-pages, env is available on req.cf.env
-    const env = (req as any).cf?.env as Env | undefined;
+    const env = getEnv<Env>(req, ctx);
     if (!env?.JIMI_DB) {
       return json({ error: 'D1 binding JIMI_DB not available' }, 500);
     }
